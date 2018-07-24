@@ -20,33 +20,37 @@
 #include "parser.h"
 #include "line.h"
 
-int parse_isTrashLine(char *singleLine){
-    int i = 0;
-    while (1) {
-        if(singleLine[i] == '\n' || singleLine[i] == ';'){
-            return 1;
-        }
-        else if(singleLine[i] != ' ' && singleLine[i] != '\t'){
-            return 0;
-        }
-        i++;
-    }
-}
-
-void parse_print_n_chars(char * str, int n)
-{
-    char t = str[n];
-    str[n] = '\0';
-    printf("%s\n", str);
-    str[n] = t;
-}
-
-
-void parse_printToken(struct token x){
+void parse_parsePrintToken(struct token x){
     printf("kind= %d\n", x.kind);
     printf("column= %d\n", x.column);
-    printf("length= %d\n", x.length);
+    printf("length= %d\n\n", x.length);
     
+}
+
+int parser_parseString(char *current, int column, struct token *x){
+    int i=1;
+    while(current[i] != '"'){
+        i++;
+    }
+    x->kind = 3;
+    x->length = i-1;
+    x->column = column;
+    
+    parse_parsePrintToken(*x);
+    return i+1;
+}
+
+int parser_parseNumber(char *current, int column, struct token *x){
+    int i=1;
+    while(isdigit(current[i])){
+        i++;   
+    }
+    x->kind = 2;
+    x->length = i;
+    x->column = column;
+    
+    parse_parsePrintToken(*x);
+    return i;
 }
 
 int parser_parseWordOrLabel(char *current, int column, struct token *x){
@@ -60,8 +64,7 @@ int parser_parseWordOrLabel(char *current, int column, struct token *x){
         x->length = i;
         x->column = column;
 
-        parse_printToken(*x);
-        //parse_print_n_chars(current, i);
+        parse_parsePrintToken(*x);
         return i+1;
     } else {
         // word
@@ -69,14 +72,14 @@ int parser_parseWordOrLabel(char *current, int column, struct token *x){
         x->length = i;
         x->column = column;
         
-        parse_printToken(*x);
-        //parse_print_n_chars(current, i);
+        parse_parsePrintToken(*x);
         return i;
     }
-}
+}// if it's mistake? DELETE!!!
 
 
-int parse_toToken(char *singleLine){
+
+int parser_parseToToken(char *singleLine){
     char *current = singleLine;
     struct token_list tokenList;
     strcpy(tokenList.source_line, singleLine);
@@ -91,29 +94,29 @@ int parse_toToken(char *singleLine){
             break;
         }
         if(strchr(",.#()", *current) != NULL) {
+            tokenList.tokens[tokenList.numberOfTokens].kind = 4;
+            tokenList.tokens[tokenList.numberOfTokens].length = 1;
+            tokenList.tokens[tokenList.numberOfTokens].column = current-singleLine; 
+            
             printf("SPECIAL %c\n", *current);
+            parse_parsePrintToken(tokenList.tokens[tokenList.numberOfTokens]);
+            
             current++;
             tokenList.numberOfTokens++;
+            
         }else if(*current == '"'){
-            int i=1;
-            while(current[i] != '"'){
-                i++;
-            }
-            parse_print_n_chars(current+1, i-1);
-            current += i+1;
+            
+            current += parser_parseString(current, current-singleLine+1, &tokenList.tokens[tokenList.numberOfTokens]);
             tokenList.numberOfTokens++;
+            
         }else if(isdigit(*current) || *current == '-' || *current == '+'){
-            int i=1;
-            while(isdigit(current[i])){
-                i++;   
-            }
-            parse_print_n_chars(current, i);
-            current += i;
+            current += parser_parseNumber(current, current-singleLine, &tokenList.tokens[tokenList.numberOfTokens] );
             tokenList.numberOfTokens++;
             
         }else if(isalpha(*current)){
             current += parser_parseWordOrLabel(current, current-singleLine, &tokenList.tokens[tokenList.numberOfTokens]);
             tokenList.numberOfTokens++;
+            
         }else{
             printf("ERROR\n");
             break;
@@ -134,11 +137,7 @@ int parser_parse(const char *fileName){
     }
     
     while(fgets(singleLine,81,fPointer) != NULL) {
-        if(0 == parse_isTrashLine(singleLine)) {
-            parse_toToken(singleLine);
-            
-            //puts(singleLine);
-        }
+        parser_parseToToken(singleLine);
     }
     fclose(fPointer);
     return 0;
