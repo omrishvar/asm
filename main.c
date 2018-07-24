@@ -45,6 +45,10 @@ void symbolSample()
         printf("INSERT FAILED\n");
         return;
     }
+    if (!SYMTABLE_Insert(table, "LabelE", SYMTABLE_SYMTYPE_DATA, 0, FALSE)) {
+        printf("INSERT FAILED\n");
+        return;
+    }
     if (!SYMTABLE_Finalize(table, 1000)) {
         printf("SYMTABLE_Finalize FAILED\n");
         return;
