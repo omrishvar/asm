@@ -22,6 +22,8 @@
 void symbolSample()
 {
     // create a table
+    //sfdsfdsfsfsfd
+    //sdfsdfsffs
     PSYMTABLE_TABLE table = NULL;
     SYMTABLE_SYMTYPE type;
     int address = 0;
