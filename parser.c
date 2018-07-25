@@ -20,6 +20,12 @@
 #include "parser.h"
 #include "line.h"
 
+void parse_parsePrintTokenList(struct token_list *x){
+    printf("Token List:\n");
+    printf("Source= %s\n",x->source_line);
+    printf("Num of tokens= %d\n\n",x->numberOfTokens);
+}
+
 void parse_parsePrintToken(struct token x){
     printf("kind= %d\n", x.kind);
     printf("column= %d\n", x.column);
@@ -79,7 +85,7 @@ int parser_parseWordOrLabel(char *current, int column, struct token *x){
 
 
 
-int parser_parseToToken(char *singleLine){
+/*int parser_parseToToken(char *singleLine){
     char *current = singleLine;
     struct token_list tokenList;
     strcpy(tokenList.source_line, singleLine);
@@ -123,12 +129,60 @@ int parser_parseToToken(char *singleLine){
         }
     }
     return 0;
+}*/
+
+struct token_list* parser_parseToToken2(char *singleLine){
+    char *current = singleLine;
+    
+    struct token_list *pTokenList = malloc(sizeof *pTokenList);
+    strcpy(pTokenList->source_line, singleLine);
+    pTokenList->numberOfTokens=0;
+    
+    while (*current != '\n') {
+        if (*current == ' ' || *current == '\t'){
+            current++;
+            continue;
+        }
+        if(*current ==';'){
+            break;
+        }
+        if(strchr(",.#()", *current) != NULL) {
+            pTokenList->tokens[pTokenList->numberOfTokens].kind = 4;
+            pTokenList->tokens[pTokenList->numberOfTokens].length = 1;
+            pTokenList->tokens[pTokenList->numberOfTokens].column = current-singleLine; 
+            
+            printf("SPECIAL %c\n", *current);
+            parse_parsePrintToken(pTokenList->tokens[pTokenList->numberOfTokens]);
+            
+            current++;
+            pTokenList->numberOfTokens++;
+            
+        }else if(*current == '"'){
+            
+            current += parser_parseString(current, current-singleLine+1, &pTokenList->tokens[pTokenList->numberOfTokens]);
+            pTokenList->numberOfTokens++;
+            
+        }else if(isdigit(*current) || *current == '-' || *current == '+'){
+            current += parser_parseNumber(current, current-singleLine, &pTokenList->tokens[pTokenList->numberOfTokens]);
+            pTokenList->numberOfTokens++;
+            
+        }else if(isalpha(*current)){
+            current += parser_parseWordOrLabel(current, current-singleLine, &pTokenList->tokens[pTokenList->numberOfTokens]);
+            pTokenList->numberOfTokens++;
+            
+        }else{
+            printf("ERROR\n");
+            break;
+        }
+    }
+    return pTokenList;
 }
 
 
 int parser_parse(const char *fileName){
     FILE *fPointer;
     char singleLine[81];
+    struct token_list *pTokenList;
     fPointer = fopen(fileName,"r");
     
     if (fPointer == NULL) {
@@ -137,7 +191,11 @@ int parser_parse(const char *fileName){
     }
     
     while(fgets(singleLine,81,fPointer) != NULL) {
-        parser_parseToToken(singleLine);
+        pTokenList = parser_parseToToken2(singleLine); 
+        if(pTokenList->numberOfTokens != 0){
+            parse_parsePrintTokenList(pTokenList);
+        }
+        free(pTokenList);
     }
     fclose(fPointer);
     return 0;
