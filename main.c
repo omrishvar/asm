@@ -70,19 +70,17 @@ void symbolSample()
 }
 
 int main(int argc, char *argv[]) { 
-    
+    int usedRows=0;
+    struct token_list **pTokenListArray;
     /*char * x = malloc(200);
     strcpy(x, "abc,#,-778,9\n");
     parse_toToken(x);*/
-    symbolSample(); /////////TO DELETE
+    //symbolSample(); /////////TO DELETE
     if(argc != 2) {
         printf("wrong number of arguments!\nUsage: %s <filename>\n", argv[0]);
         return 1;
     }
-    
-    if(0 != parser_parse(argv[1])){
-            return 1;
-    }
+    pTokenListArray=parser_parse(argv[1], &usedRows);
     
     return 0;
 }

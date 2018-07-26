@@ -14,7 +14,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-int parser_parse(const char *fileName);
+struct token_list ** parser_parse(const char *fileName, int* useRows);
 
 // TO_DELETE
 int parse_toToken(char *singleLine);

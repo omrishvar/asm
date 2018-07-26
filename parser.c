@@ -132,13 +132,12 @@ int parser_parseWordOrLabel(char *current, int column, struct token *x){
 }*/
 
 struct token_list* parser_parseToToken2(char *singleLine){
-    char *current = singleLine;
-    
+    char *current = singleLine; 
     struct token_list *pTokenList = malloc(sizeof *pTokenList);
     strcpy(pTokenList->source_line, singleLine);
     pTokenList->numberOfTokens=0;
     
-    while (*current != '\n') {
+    while (*current != '\n' && *current != '\0') {
         if (*current == ' ' || *current == '\t'){
             current++;
             continue;
@@ -179,25 +178,25 @@ struct token_list* parser_parseToToken2(char *singleLine){
 }
 
 
-int parser_parse(const char *fileName){
+struct token_list ** parser_parse(const char *fileName, int* useRows){
     FILE *fPointer;
     char singleLine[81];
-    struct token_list *pTokenList;
+    struct token_list ** token_list_array =(struct token_list ** ) malloc(100* sizeof(*token_list_array));
+    int i=0;
     fPointer = fopen(fileName,"r");
     
     if (fPointer == NULL) {
         printf("ERROR, The file is null\n");
-        return 1;
+        return NULL;
     }
     
     while(fgets(singleLine,81,fPointer) != NULL) {
-        pTokenList = parser_parseToToken2(singleLine); 
-        if(pTokenList->numberOfTokens != 0){
-            parse_parsePrintTokenList(pTokenList);
-        }
-        free(pTokenList);
+        token_list_array[i]= parser_parseToToken2(singleLine); 
+        parse_parsePrintTokenList(token_list_array[i]);
+        i++;
     }
+    *useRows = i; 
     fclose(fPointer);
-    return 0;
+    return token_list_array;
 }
 
