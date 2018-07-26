@@ -4,6 +4,7 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>compiler.h</itemPath>
       <itemPath>global.h</itemPath>
       <itemPath>line.h</itemPath>
       <itemPath>parser.h</itemPath>
@@ -16,6 +17,7 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <itemPath>compiler.c</itemPath>
       <itemPath>main.c</itemPath>
       <itemPath>parser.c</itemPath>
       <itemPath>symtable.c</itemPath>
@@ -60,6 +62,10 @@
         </linkerTool>
       </compileType>
       <item path="bacon" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="compiler.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="compiler.h" ex="false" tool="3" flavor2="0">
       </item>
       <folder path="TestFiles">
         <linkerTool>
@@ -125,6 +131,10 @@
         </linkerTool>
       </compileType>
       <item path="bacon" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="compiler.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="compiler.h" ex="false" tool="3" flavor2="0">
       </item>
       <folder path="TestFiles">
         <linkerTool>

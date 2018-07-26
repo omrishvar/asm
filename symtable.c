@@ -58,7 +58,7 @@ int symtable_FindSymbol(PSYMTABLE_TABLE table, const char *name) {
     }
     return -1;
 }
-BOOL SYMTABLE_Insert(PSYMTABLE_TABLE table, const char *name, SYMTABLE_SYMTYPE type, int address, BOOL isExtern) {
+BOOL SYMTABLE_Insert(PSYMTABLE_TABLE table, const char *name, int len, SYMTABLE_SYMTYPE type, int address, BOOL isExtern) {
     if (table->isFinalized) {
         printf("ERROR  CANT INSERT TO FINZALIZED TABLE\n");
         return FALSE;
@@ -85,12 +85,13 @@ BOOL SYMTABLE_Insert(PSYMTABLE_TABLE table, const char *name, SYMTABLE_SYMTYPE t
     }
     
     // insert the new record
-    table->table[table->usedRecords].name = malloc(strlen(name) + 1);
+    table->table[table->usedRecords].name = malloc(len + 1);
     if (table->table[table->usedRecords].name == NULL) {
         printf("FATAL ERROR: malloc(%lu) failed", strlen(name) + 1);
         return FALSE;
     }
-    strcpy(table->table[table->usedRecords].name, name);
+    strncpy(table->table[table->usedRecords].name, name, len);
+    table->table[table->usedRecords].name[len] = '\0';
     table->table[table->usedRecords].type = type;
     table->table[table->usedRecords].address = address;
     table->table[table->usedRecords].isExtern = isExtern;

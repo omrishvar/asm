@@ -19,55 +19,7 @@
 #include "global.h"
 #include "parser.h"
 #include "symtable.h"
-void symbolSample()
-{
-    // create a table
-    //sfdsfdsfsfsfd
-    //sdfsdfsffs
-    PSYMTABLE_TABLE table = NULL;
-    SYMTABLE_SYMTYPE type;
-    int address = 0;
-    BOOL isExtern = FALSE;
-    if (!SYMTABLE_Create(&table)) {
-        printf("Create Failed\n");
-    }
-    if (!SYMTABLE_Insert(table, "LabelA", SYMTABLE_SYMTYPE_CODE, 100, FALSE)) {
-        printf("INSERT FAILED\n");
-        return;
-    }
-    if (!SYMTABLE_Insert(table, "LabelB", SYMTABLE_SYMTYPE_CODE, 200, FALSE)) {
-        printf("INSERT FAILED\n");
-        return;
-    }
-    if (!SYMTABLE_Insert(table, "LabelC", SYMTABLE_SYMTYPE_CODE, 0, TRUE)) {
-        printf("INSERT FAILED\n");
-        return;
-    }
-    if (!SYMTABLE_Insert(table, "LabelD", SYMTABLE_SYMTYPE_DATA, 0, FALSE)) {
-        printf("INSERT FAILED\n");
-        return;
-    }
-    if (!SYMTABLE_Insert(table, "LabelE", SYMTABLE_SYMTYPE_DATA, 0, FALSE)) {
-        printf("INSERT FAILED\n");
-        return;
-    }
-    if (!SYMTABLE_Finalize(table, 1000)) {
-        printf("SYMTABLE_Finalize FAILED\n");
-        return;
-    }
-    if (!SYMTABLE_MarkForExport(table, "LabelB")) {
-        printf("SYMTABLE_MarkForExport FAILED\n");
-        return;
-    }
-    
-    SYMTABLE_GetSymbolInfo(table, "LabelA", &type, &address, &isExtern);
-    SYMTABLE_GetSymbolInfo(table, "LabelB", &type, &address, &isExtern);
-    SYMTABLE_GetSymbolInfo(table, "LabelC", &type, &address, &isExtern);
-    SYMTABLE_GetSymbolInfo(table, "LabelD", &type, &address, &isExtern);
-    SYMTABLE_Free(table);
-
-
-}
+#include "compiler.h"
 
 int main(int argc, char *argv[]) { 
     int usedRows=0;
@@ -81,6 +33,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     pTokenListArray=parser_parse(argv[1], &usedRows);
+    
+    compiler_compile(pTokenListArray,usedRows);
     
     return 0;
 }
