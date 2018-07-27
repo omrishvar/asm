@@ -33,6 +33,37 @@ void parse_parsePrintToken(struct token x){
     
 }
 
+int parser_parseDirective(char *current, int column, struct token *x){
+    int i=1;
+    while(isalpha(current[i])){
+        i++;
+    }
+    x->kind = 5;
+    x->length = i;
+    x->column = column;
+    
+    parse_parsePrintToken(*x);
+    return i+1;
+}
+
+int parser_parseImmediateNum(char *current, int column, struct token *x){
+    int i=1;
+    if(current[i] != '-' || current[i] != '+' || isdigit(current[i])){
+        i++;
+        while(isdigit(current[i])){
+            i++;
+        }
+    }
+    x->kind = 4;
+    x->length = i;
+    x->column = column;
+    
+    parse_parsePrintToken(*x);
+    return i+1;
+}
+
+
+
 int parser_parseString(char *current, int column, struct token *x){
     int i=1;
     while(current[i] != '"'){
@@ -72,6 +103,14 @@ int parser_parseWordOrLabel(char *current, int column, struct token *x){
 
         parse_parsePrintToken(*x);
         return i+1;
+    }else if(i == 2 && current[0] == 'r' && isdigit(current[1]) && current[1] != '8' && current[1] != '9'){ 
+        //register
+        x->kind = 5;
+        x->length = i;
+        x->column = column;
+        
+        parse_parsePrintToken(*x);
+        return i;
     } else {
         // word
         x->kind = 0;
@@ -81,7 +120,7 @@ int parser_parseWordOrLabel(char *current, int column, struct token *x){
         parse_parsePrintToken(*x);
         return i;
     }
-}// if it's mistake? DELETE!!!
+}
 
 
 
@@ -145,8 +184,8 @@ struct token_list* parser_parseToToken2(char *singleLine){
         if(*current ==';'){
             break;
         }
-        if(strchr(",.#()", *current) != NULL) {
-            pTokenList->tokens[pTokenList->numberOfTokens].kind = 4;
+        if(strchr(",()", *current) != NULL) {
+            pTokenList->tokens[pTokenList->numberOfTokens].kind = 6;
             pTokenList->tokens[pTokenList->numberOfTokens].length = 1;
             pTokenList->tokens[pTokenList->numberOfTokens].column = current-singleLine; 
             
@@ -154,6 +193,15 @@ struct token_list* parser_parseToToken2(char *singleLine){
             parse_parsePrintToken(pTokenList->tokens[pTokenList->numberOfTokens]);
             
             current++;
+            pTokenList->numberOfTokens++;
+        }else if (*current =='.'){
+            
+            current += parser_parseDirective(current, current-singleLine+1, &pTokenList->tokens[pTokenList->numberOfTokens]);
+            pTokenList->numberOfTokens++;
+            
+        }else if (*current =='#'){
+            
+            current += parser_parseImmediateNum(current, current-singleLine+1, &pTokenList->tokens[pTokenList->numberOfTokens]);
             pTokenList->numberOfTokens++;
             
         }else if(*current == '"'){
@@ -178,7 +226,7 @@ struct token_list* parser_parseToToken2(char *singleLine){
 }
 
 
-struct token_list ** parser_parse(const char *fileName, int* useRows){
+struct token_list ** parser_parse(const char *fileName, int* usedRows){
     FILE *fPointer;
     char singleLine[81];
     struct token_list ** token_list_array =(struct token_list ** ) malloc(100* sizeof(*token_list_array));
@@ -195,7 +243,7 @@ struct token_list ** parser_parse(const char *fileName, int* useRows){
         parse_parsePrintTokenList(token_list_array[i]);
         i++;
     }
-    *useRows = i; 
+    *usedRows = i; 
     fclose(fPointer);
     return token_list_array;
 }
