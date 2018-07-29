@@ -50,9 +50,9 @@ BOOL SYMTABLE_Create(PSYMTABLE_TABLE *createdTable) {
     return TRUE;
 }
 
-int symtable_FindSymbol(PSYMTABLE_TABLE table, const char *name) {
+int symtable_FindSymbol(PSYMTABLE_TABLE table, const char *name, int length) {
     for (int i = 0; i < table->usedRecords; i++) {
-        if (strcmp(name, table->table[i].name) == 0) {
+        if (strncmp(name, table->table[i].name, length) == 0) {
             return i;
         }
     }
@@ -64,7 +64,7 @@ BOOL SYMTABLE_Insert(PSYMTABLE_TABLE table, const char *name, int len, SYMTABLE_
         return FALSE;
     }
     // first we need to check the label isn't already exist
-    if (-1 != symtable_FindSymbol(table, name)) {
+    if (-1 != symtable_FindSymbol(table, name, len)) {
         // TODO: add error handling
         printf("label %s already defined", name);
         return FALSE;
@@ -122,7 +122,7 @@ BOOL SYMTABLE_MarkForExport(PSYMTABLE_TABLE table, const char *name) {
         printf("ERROR: SYMTABLE_MarkForExport should be called on finalized table\n");
         return FALSE;
     }
-    i = symtable_FindSymbol(table, name);
+    i = symtable_FindSymbol(table, name, strlen(name));
     if (i == -1) {
         printf("ERROR: UNRECOGNIZED LABEL %s", name);
         return FALSE;
@@ -135,13 +135,13 @@ BOOL SYMTABLE_MarkForExport(PSYMTABLE_TABLE table, const char *name) {
     return TRUE;
 }
 
-BOOL SYMTABLE_GetSymbolInfo(PSYMTABLE_TABLE table, const char *name, SYMTABLE_SYMTYPE *type, int *address, BOOL *isExtern) {
+BOOL SYMTABLE_GetSymbolInfo(PSYMTABLE_TABLE table, const char *name, int length, SYMTABLE_SYMTYPE *type, int *address, BOOL *isExtern) {
     int i = 0;
     if (!table->isFinalized) {
         printf("ERROR: SYMTABLE_MarkForExport should be called on finalized table\n");
         return FALSE;
     }
-    i = symtable_FindSymbol(table, name);
+    i = symtable_FindSymbol(table, name, length);
     if (i == -1) {
         printf("ERROR: UNRECOGNIZED LABEL %s", name);
         return FALSE;

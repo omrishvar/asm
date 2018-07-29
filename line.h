@@ -54,6 +54,12 @@ struct token_list {
     enum opcode opcode;
     enum operand_type source_operand_type;
     enum operand_type destination_operand_type;
+    int source_operand_index;
+    int destination_operand_index;
+    int first_word;
+    int second_word;
+    int third_word;
+    int L;
 };
 
 

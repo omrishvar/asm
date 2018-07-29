@@ -1,4 +1,2 @@
-MAIN: mov r3,LENGTH
-LOOP: jmp L1
-prn #-5
-sub r1,r4
+Main: prn r4
+add Main,r4
