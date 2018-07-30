@@ -9,6 +9,7 @@
       <itemPath>compiler.h</itemPath>
       <itemPath>global.h</itemPath>
       <itemPath>line.h</itemPath>
+      <itemPath>list.h</itemPath>
       <itemPath>parser.h</itemPath>
       <itemPath>symtable.h</itemPath>
     </logicalFolder>
@@ -22,6 +23,7 @@
       <itemPath>LEX.c</itemPath>
       <itemPath>LINESTR.c</itemPath>
       <itemPath>compiler.c</itemPath>
+      <itemPath>list.c</itemPath>
       <itemPath>main.c</itemPath>
       <itemPath>parser.c</itemPath>
       <itemPath>symtable.c</itemPath>
@@ -92,12 +94,17 @@
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
+            <pElem>.</pElem>
           </linkerDynSerch>
         </linkerTool>
       </folder>
       <item path="global.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="line.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="list.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="list.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -177,6 +184,10 @@
       <item path="global.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="line.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="list.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="list.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.c" ex="false" tool="0" flavor2="0">
       </item>
