@@ -30,11 +30,32 @@ int main(int argc, char *argv[]) {
     /*int usedRows=0;
     struct token_list **pTokenListArray;*/
     
+    
+    ///////////////
+
+    LINESTR_Open("sample");
+     
+
+    while (1) {
+        PLINESTR_LINE ptLine = NULL;
+        if (!LINESTR_GetNextLine(&ptLine))
+        {
+            
+            break;
+        }
+        
+        printf("%d\t%lu\t%s\n", ptLine->nLineNumber, strlen(ptLine->szLine), ptLine->szLine);
+        LINESTR_FreeLine(ptLine);
+
+    }
+    return 0;
+    ///////////////
+    
     if(2 != argc) {
         printf("wrong number of arguments!\nUsage: %s <filename>\n", argv[0]);
         return 1;
     }
-    if(FALSE == LEX_Open(argv[1], &ptFilePointer)){
+    if(FALSE == LEX_Open(argv[1])){
         printf("ERROR");
         return 1;
     }

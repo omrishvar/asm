@@ -16,6 +16,19 @@
 
 #include "global.h"
 
-BOOL LINESTR_Open(const char * szFilenName, FILE * ptFilePointer);
+#define LINESTR_MAX_LINE_LENGTH 81 // including NULL 
 
+
+typedef struct LINESTR_LINE {
+    char szLine[LINESTR_MAX_LINE_LENGTH];
+    int nLineNumber; // rows number of the file
+} LINESTR_LINE, *PLINESTR_LINE;
+
+BOOL LINESTR_Open(const char * szFilenName);
+
+BOOL LINESTR_GetNextLine(PLINESTR_LINE * pptLine);
+
+void LINESTR_FreeLine(PLINESTR_LINE ptLine);
+
+void LINESTR_Close();
 #endif /* LINESTR_H */

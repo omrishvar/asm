@@ -39,7 +39,19 @@
                    kind="IMPORTANT_FILES_FOLDER">
       <itemPath>Makefile</itemPath>
     </logicalFolder>
+    <logicalFolder name="TestFiles"
+                   displayName="Test Files"
+                   projectFiles="false"
+                   kind="TEST_LOGICAL_FOLDER">
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
     <itemPath>bacon</itemPath>
+    <itemPath>sample.as</itemPath>
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -56,6 +68,7 @@
         </cTool>
         <linkerTool>
           <linkerDynSerch>
+            <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
@@ -95,6 +108,7 @@
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
+            <pElem>.</pElem>
           </linkerDynSerch>
         </linkerTool>
       </folder>
@@ -111,6 +125,8 @@
       <item path="parser.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="parser.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="sample.as" ex="false" tool="3" flavor2="0">
       </item>
       <item path="symtable.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -149,6 +165,7 @@
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
+            <pElem>.</pElem>
           </linkerDynSerch>
         </linkerTool>
       </compileType>
@@ -178,6 +195,7 @@
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
+            <pElem>.</pElem>
           </linkerDynSerch>
         </linkerTool>
       </folder>
@@ -194,6 +212,8 @@
       <item path="parser.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="parser.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="sample.as" ex="false" tool="3" flavor2="0">
       </item>
       <item path="symtable.c" ex="false" tool="0" flavor2="0">
       </item>

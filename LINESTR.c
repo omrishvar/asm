@@ -21,39 +21,76 @@
 #include "LINESTR.h"
 #include "global.h"
 
-#define MAX_LINE_LENGTH 81 // including NULL 
+#define SOURCE_FILE_EXTENSION ".as"
 
+static FILE * g_phSourceFile = NULL;
+static int g_nLineNumber = 0;
 
-
-typedef struct LINESTR_LINE {
-    char szLine[MAX_LINE_LENGTH];
-    int nLineNumber; // rows number of the file
-} LINESTR_LINE, *PLINESTR_LINE;
-
-
-BOOL LINESTR_Open(const char * szFilenName, FILE * ptFilePointer) {
-    
-    ptFilePointer = fopen(szFilenName,"r");
-    if (ptFilePointer == NULL) {
-        printf("ERROR, The file is null\n");
+BOOL LINESTR_Open(const char * szFileName) {
+    // adding the source file extension
+    char * szFullFileName = NULL;
+    szFullFileName = malloc(strlen(szFileName) + strlen(SOURCE_FILE_EXTENSION) + 1); // +1 for NULL terminator
+    if (NULL == szFullFileName) {
         return FALSE;
     }
+    strcpy(szFullFileName, szFileName);
+    strcat(szFullFileName, SOURCE_FILE_EXTENSION);
+    g_phSourceFile = fopen(szFullFileName,"r");
+    if (g_phSourceFile == NULL) {
+        // TODO: Error handling
+        printf("ERROR, The file is null\n");
+        free(szFullFileName);
+        return FALSE;
+    }
+    free(szFullFileName);
+    g_nLineNumber = 1;
     return TRUE;
 }
 
 BOOL LINESTR_GetNextLine(PLINESTR_LINE * pptLine) {
-    
-    
-    
-        
-        
-    
+    PLINESTR_LINE ptLine = NULL;
+    if (NULL == g_phSourceFile) {
+        // no open file
+         // TODO: Error handling
+        printf("LINESTR_GetNextLine called, but no file is open\n");
+        return FALSE;
+    }
+
+    // alloc a new LINESTR_LINE structure
+    ptLine = malloc(sizeof(*ptLine));
+    if (NULL == ptLine) {
+        // TODO: error handling
+        printf("malloc failed\n");
+        return FALSE;
+    }
+    ptLine->nLineNumber = g_nLineNumber;
+    if (NULL == fgets(ptLine->szLine, sizeof(ptLine->szLine), g_phSourceFile)) {
+        // end of file
+        printf("EOF");//TODO REMOVE
+        free(ptLine);
+        return FALSE;
+    }
+
+    ptLine->szLine[sizeof(ptLine->szLine)-1] = '\0';
+    // fgets doesn't delete the '\n' from the string.
+    if (ptLine->szLine[strlen(ptLine->szLine)-1] == '\n') {
+        ptLine->szLine[strlen(ptLine->szLine)-1] = '\0';
+    }
+    g_nLineNumber++;
+
+    *pptLine = ptLine;
+    return TRUE;
 }
 
-void LINESTR_FreeLine(PLINESTR_LINE pLine) {
-    return;
+void LINESTR_FreeLine(PLINESTR_LINE ptLine) {
+    if (NULL != ptLine) {
+        free(ptLine);
+    }
 }
 
 void LINESTR_Close() {
-    
+    if (NULL != g_phSourceFile) {
+        fclose(g_phSourceFile);
+        g_phSourceFile = NULL;
+    }
 }

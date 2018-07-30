@@ -41,6 +41,6 @@ typedef struct LEX_TOKEN {
     LEX_TOKEN_VALUE uValue;
 } LEX_TOKEN, *PLEX_TOKEN;
 
-BOOL LEX_Open(char * szFileName, FILE * ptFilePointer);
+BOOL LEX_Open(const char * szFileName);
 
 #endif /* LEX_H */

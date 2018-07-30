@@ -22,9 +22,9 @@
 #include "LINESTR.h"
 #include "global.h"
 
-BOOL LEX_Open(char * szFileName, FILE * ptFilePointer){
+BOOL LEX_Open(const char * szFileName){
 
-    if(LINESTR_Open(szFileName, ptFilePointer) == FALSE){
+    if(LINESTR_Open(szFileName) == FALSE){
         return FALSE;
     }
     return TRUE;
