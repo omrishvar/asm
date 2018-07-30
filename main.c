@@ -21,17 +21,32 @@
 #include "symtable.h"
 #include "compiler.h"
 
+#include "LINESTR.h"
+#include "LEX.h"
+
 int main(int argc, char *argv[]) { 
-    int usedRows=0;
-    struct token_list **pTokenListArray;
+    FILE * ptFilePointer;
+    char singleLine[81];
+    /*int usedRows=0;
+    struct token_list **pTokenListArray;*/
     
-    if(argc != 2) {
+    if(2 != argc) {
         printf("wrong number of arguments!\nUsage: %s <filename>\n", argv[0]);
         return 1;
     }
-    pTokenListArray=parser_parse(argv[1], &usedRows);
+    if(FALSE == LEX_Open(argv[1], &ptFilePointer)){
+        printf("ERROR");
+        return 1;
+    }
     
-    compiler_compile(pTokenListArray,usedRows);
+    while(fgets(singleLine,81,ptFilePointer) != NULL) {
+        puts(singleLine);
+    }
+
+    
+    /*pTokenListArray=parser_parse(argv[1], &usedRows);
+    
+    compiler_compile(pTokenListArray,usedRows);*/
     
     return 0;
 }

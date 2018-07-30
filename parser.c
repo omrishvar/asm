@@ -56,7 +56,7 @@ int parser_parseImmediateNum(char *current, int column, struct token *x){
     }
     x->kind = 4;
     x->length = i;
-    x->column = column;
+    x->column = column+1;
     
     parse_parsePrintToken(*x);
     return i+2;
