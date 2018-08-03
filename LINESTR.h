@@ -24,9 +24,9 @@ typedef struct LINESTR_LINE {
     int nLineNumber; // rows number of the file
 } LINESTR_LINE, *PLINESTR_LINE;
 
-BOOL LINESTR_Open(const char * szFilenName);
+GLOB_ERROR LINESTR_Open(const char * szFilenName);
 
-BOOL LINESTR_GetNextLine(PLINESTR_LINE * pptLine);
+GLOB_ERROR LINESTR_GetNextLine(PLINESTR_LINE * pptLine);
 
 void LINESTR_FreeLine(PLINESTR_LINE ptLine);
 

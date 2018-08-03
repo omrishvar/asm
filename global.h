@@ -16,6 +16,8 @@
 #define FALSE 0
 #define TRUE 1
 
+#define GLOB_ERROR_SYS_CALL_ERROR()   (GLOB_ERROR_SYS_CALL_FAILED | errno)
+
 typedef int BOOL;
 
 typedef enum GLOB_OPCODE {
@@ -44,5 +46,17 @@ typedef enum GLOB_DIRECTIVE {
     GLOB_DIRECTIVE_EXTERN,
 } GLOB_DIRECTIVE;
 
+typedef enum GLOB_ERROR {
+    GLOB_SUCCESS = 0,
+    GLOB_ERROR_SYS_CALL_FAILED = 0x100,
+    GLOB_ERROR_END_OF_LINE,
+            GLOB_ERROR_END_OF_FILE,
+            GLOB_ERROR_INVALID_STATE,
+            GLOB_ERROR_PARSING_FAILED,
+            GLOB_ERROR_FORBIDDEN_IDENTIFIER,
+            GLOB_ERROR_TOO_LONG_LABEL,
+            GLOB_ERROR_UNKNOWN,
+            
+} GLOB_ERROR;
 #endif /* GLOBAL_H */
 

@@ -27,26 +27,41 @@
 int main(int argc, char *argv[]) { 
     FILE * ptFilePointer;
     char singleLine[81];
+    GLOB_ERROR eRetValue;
     /*int usedRows=0;
     struct token_list **pTokenListArray;*/
     
     
     ///////////////
 
-    LINESTR_Open("sample");
-     
+    eRetValue = LEX_Open("sample");
+    if (eRetValue) {
+        return 1;
+    }
 
     while (1) {
-        PLINESTR_LINE ptLine = NULL;
-        if (!LINESTR_GetNextLine(&ptLine))
-        {
-            
+        PLEX_TOKEN ptToken = NULL;
+        eRetValue = LEX_ReadNextToken(&ptToken);
+        if (GLOB_ERROR_END_OF_FILE == eRetValue) {
+            printf("EOF\n");
             break;
         }
-        
-        printf("%d\t%lu\t%s\n", ptLine->nLineNumber, strlen(ptLine->szLine), ptLine->szLine);
-        LINESTR_FreeLine(ptLine);
-
+        if (GLOB_ERROR_END_OF_LINE == eRetValue) {
+            printf("----------------\n");
+            eRetValue = LEX_MoveToNextLine();
+            if (eRetValue) {
+                printf("LEX_MoveToNextLine failed\n");
+                break;
+            }
+        }
+        else if (eRetValue) {
+            printf("LEX_ReadNextToken failed\n");
+            break;
+        }
+        else {
+            printf("%d\t%d\n", ptToken->nColumn, ptToken->eKind);
+            LEX_FreeToken(ptToken);
+        }
     }
     return 0;
     ///////////////

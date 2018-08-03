@@ -26,12 +26,12 @@
 static FILE * g_phSourceFile = NULL;
 static int g_nLineNumber = 0;
 
-BOOL LINESTR_Open(const char * szFileName) {
+GLOB_ERROR LINESTR_Open(const char * szFileName) {
     // adding the source file extension
     char * szFullFileName = NULL;
     szFullFileName = malloc(strlen(szFileName) + strlen(SOURCE_FILE_EXTENSION) + 1); // +1 for NULL terminator
     if (NULL == szFullFileName) {
-        return FALSE;
+        return GLOB_ERROR_SYS_CALL_ERROR();
     }
     strcpy(szFullFileName, szFileName);
     strcat(szFullFileName, SOURCE_FILE_EXTENSION);
@@ -40,20 +40,20 @@ BOOL LINESTR_Open(const char * szFileName) {
         // TODO: Error handling
         printf("ERROR, The file is null\n");
         free(szFullFileName);
-        return FALSE;
+        return GLOB_ERROR_SYS_CALL_ERROR();
     }
     free(szFullFileName);
     g_nLineNumber = 1;
-    return TRUE;
+    return GLOB_SUCCESS;
 }
 
-BOOL LINESTR_GetNextLine(PLINESTR_LINE * pptLine) {
+GLOB_ERROR LINESTR_GetNextLine(PLINESTR_LINE * pptLine) {
     PLINESTR_LINE ptLine = NULL;
     if (NULL == g_phSourceFile) {
         // no open file
          // TODO: Error handling
         printf("LINESTR_GetNextLine called, but no file is open\n");
-        return FALSE;
+        return GLOB_ERROR_INVALID_STATE;
     }
 
     // alloc a new LINESTR_LINE structure
@@ -61,14 +61,14 @@ BOOL LINESTR_GetNextLine(PLINESTR_LINE * pptLine) {
     if (NULL == ptLine) {
         // TODO: error handling
         printf("malloc failed\n");
-        return FALSE;
+        return GLOB_ERROR_SYS_CALL_ERROR();
     }
     ptLine->nLineNumber = g_nLineNumber;
     if (NULL == fgets(ptLine->szLine, sizeof(ptLine->szLine), g_phSourceFile)) {
         // end of file
         printf("EOF");//TODO REMOVE
         free(ptLine);
-        return FALSE;
+        return GLOB_ERROR_END_OF_FILE;
     }
 
     ptLine->szLine[sizeof(ptLine->szLine)-1] = '\0';
@@ -79,7 +79,7 @@ BOOL LINESTR_GetNextLine(PLINESTR_LINE * pptLine) {
     g_nLineNumber++;
 
     *pptLine = ptLine;
-    return TRUE;
+    return GLOB_SUCCESS;
 }
 
 void LINESTR_FreeLine(PLINESTR_LINE ptLine) {
