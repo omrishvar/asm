@@ -1,96 +1,157 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/* 
- * File:   LINESTR.c
- * Author: doron276
+/*****************************************************************************
+ * File:    linestr.c
+ * Author:  Doron Shvartztuch
+ * The LINESTR module is responsible for reading the source files
+ * and split the text to lines.
+ * See linestr.h for more documentation.
  * 
- * Created on 30 יולי 2018, 10:48
- */
+ * Implementation:
+ * File I/O operations are performed with standard C library functions.
+ * The LINESTR_HANDLE contains the information for reading the next lines from
+ * the source file and counting the rows.
+ *****************************************************************************/
 
+/******************************************************************************
+ * INCLUDES
+ *****************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
-
-#include "LINESTR.h"
 #include "global.h"
+#include "helper.h"
+#include "LINESTR.h"
 
-#define SOURCE_FILE_EXTENSION ".as"
+/******************************************************************************
+ * TYPEDEFS
+ *****************************************************************************/
 
-static FILE * g_phSourceFile = NULL;
-static int g_nLineNumber = 0;
+/* LINESTR_FILE is the struct behind the the HLINESTR_FILE.
+ * It keeps the FILE* to the file itself and the number of the
+ * next row to be read  
+ */
+struct LINESTR_FILE {
+    /* The source file */
+    FILE * phSourceFile;
+    
+    /* Number of the next row that will be read. First row gets 1 */
+    int nLineNumber; 
+};
 
-GLOB_ERROR LINESTR_Open(const char * szFileName) {
-    // adding the source file extension
+/******************************************************************************
+ * EXTERNAL FUNCTIONS
+ * ------------------
+ * See function-level documentation in the header file
+ *****************************************************************************/
+
+/******************************************************************************
+ * LINESTR_Open
+ *****************************************************************************/
+GLOB_ERROR LINESTR_Open(const char * szFileName,  PHLINESTR_FILE phFile) {
+    HLINESTR_FILE hFile = NULL;
+    GLOB_ERROR eRetVal = GLOB_ERROR_UNKNOWN;
     char * szFullFileName = NULL;
-    szFullFileName = malloc(strlen(szFileName) + strlen(SOURCE_FILE_EXTENSION) + 1); // +1 for NULL terminator
+    
+    /* Check parameters */
+    if (NULL == szFileName || NULL == phFile) {
+        return GLOB_ERROR_INVALID_PARAMETERS;
+    }
+    
+    /* Allocate the handle */
+    hFile = malloc(sizeof(*hFile));
+    if (NULL == hFile) {
+        return GLOB_ERROR_SYS_CALL_ERROR();
+    }
+    
+    /* Get the full file name to open */
+    szFullFileName = HELPER_ConcatStrings(szFileName,
+        GLOB_FILE_EXTENSION_SOURCE);
     if (NULL == szFullFileName) {
-        return GLOB_ERROR_SYS_CALL_ERROR();
+        eRetVal = GLOB_ERROR_SYS_CALL_ERROR();
+        free(hFile);
+        return eRetVal;
     }
-    strcpy(szFullFileName, szFileName);
-    strcat(szFullFileName, SOURCE_FILE_EXTENSION);
-    g_phSourceFile = fopen(szFullFileName,"r");
-    if (g_phSourceFile == NULL) {
-        // TODO: Error handling
-        printf("ERROR, The file is null\n");
+
+    /* Open the file */
+    hFile->phSourceFile = fopen(szFullFileName, "r");
+    if (hFile->phSourceFile == NULL) {
+        eRetVal = GLOB_ERROR_SYS_CALL_ERROR();
+        free(hFile);
         free(szFullFileName);
-        return GLOB_ERROR_SYS_CALL_ERROR();
+        return eRetVal;
     }
+    
+    /* Init the line counter */
+    hFile->nLineNumber = 1;
+    
+    /* Set out parameter upon success */
+    *phFile = hFile;
     free(szFullFileName);
-    g_nLineNumber = 1;
     return GLOB_SUCCESS;
 }
 
-GLOB_ERROR LINESTR_GetNextLine(PLINESTR_LINE * pptLine) {
+/******************************************************************************
+ * LINESTR_GetNextLine
+ *****************************************************************************/
+GLOB_ERROR LINESTR_GetNextLine(HLINESTR_FILE hFile, PLINESTR_LINE * pptLine) {
     PLINESTR_LINE ptLine = NULL;
-    if (NULL == g_phSourceFile) {
-        // no open file
-         // TODO: Error handling
-        printf("LINESTR_GetNextLine called, but no file is open\n");
-        return GLOB_ERROR_INVALID_STATE;
+    GLOB_ERROR eRetVal = GLOB_ERROR_UNKNOWN;
+    
+    /* Check parameters */
+    if (NULL == hFile || NULL == pptLine) {
+        return GLOB_ERROR_INVALID_PARAMETERS;
     }
 
-    // alloc a new LINESTR_LINE structure
+    /* allocate a new LINESTR_LINE structure */
     ptLine = malloc(sizeof(*ptLine));
     if (NULL == ptLine) {
-        // TODO: error handling
-        printf("malloc failed\n");
         return GLOB_ERROR_SYS_CALL_ERROR();
     }
-    ptLine->nLineNumber = g_nLineNumber;
-    if (NULL == fgets(ptLine->szLine, sizeof(ptLine->szLine), g_phSourceFile)) {
-        // end of file
-        printf("EOF");//TODO REMOVE
+    
+    /* Set the row number */
+    ptLine->nLineNumber = hFile->nLineNumber;
+    
+    /* Read the line */
+    if (NULL == fgets(ptLine->szLine, sizeof(ptLine->szLine),
+        hFile->phSourceFile)) {
+        eRetVal = GLOB_ERROR_SYS_CALL_ERROR();
         free(ptLine);
-        return GLOB_ERROR_END_OF_FILE;
+        /* fgets returns NULL in case of either error or EOF, so check it */
+        return feof(ptLine->szLine) ? GLOB_ERROR_END_OF_FILE : eRetVal;
     }
 
-    ptLine->szLine[sizeof(ptLine->szLine)-1] = '\0';
-    // fgets doesn't delete the '\n' from the string.
+    TERMINATE_STRING(ptLine->szLine);
+    
+    /* Trunk the '\n', if exists from the string. */
     if (ptLine->szLine[strlen(ptLine->szLine)-1] == '\n') {
         ptLine->szLine[strlen(ptLine->szLine)-1] = '\0';
     }
-    g_nLineNumber++;
+    
+    /* Increment the rows counter */
+    hFile->nLineNumber++;
 
+    /* Set out parameters */
     *pptLine = ptLine;
     return GLOB_SUCCESS;
 }
 
+/******************************************************************************
+ * LINESTR_FreeLine
+ *****************************************************************************/
 void LINESTR_FreeLine(PLINESTR_LINE ptLine) {
     if (NULL != ptLine) {
         free(ptLine);
     }
 }
 
-void LINESTR_Close() {
-    if (NULL != g_phSourceFile) {
-        fclose(g_phSourceFile);
-        g_phSourceFile = NULL;
+/******************************************************************************
+ * LINESTR_Close
+ *****************************************************************************/
+void LINESTR_Close(HLINESTR_FILE hFile) {
+    if (NULL != hFile) {
+        fclose(hFile->phSourceFile);
+        free(hFile);
     }
 }

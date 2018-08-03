@@ -8,6 +8,7 @@
       <itemPath>LINESTR.h</itemPath>
       <itemPath>compiler.h</itemPath>
       <itemPath>global.h</itemPath>
+      <itemPath>helper.h</itemPath>
       <itemPath>line.h</itemPath>
       <itemPath>list.h</itemPath>
       <itemPath>parser.h</itemPath>
@@ -23,6 +24,7 @@
       <itemPath>LEX.c</itemPath>
       <itemPath>LINESTR.c</itemPath>
       <itemPath>compiler.c</itemPath>
+      <itemPath>helper.c</itemPath>
       <itemPath>list.c</itemPath>
       <itemPath>main.c</itemPath>
       <itemPath>parser.c</itemPath>
@@ -118,6 +120,10 @@
       </folder>
       <item path="global.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="helper.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="helper.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="line.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="list.c" ex="false" tool="0" flavor2="0">
@@ -208,6 +214,10 @@
         </linkerTool>
       </folder>
       <item path="global.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="helper.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="helper.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="line.h" ex="false" tool="3" flavor2="0">
       </item>

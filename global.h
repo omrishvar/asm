@@ -17,7 +17,9 @@
 #define TRUE 1
 
 #define GLOB_ERROR_SYS_CALL_ERROR()   (GLOB_ERROR_SYS_CALL_FAILED | errno)
+#define TERMINATE_STRING(str)   ((str)[sizeof((str))-1] = '\0')
 
+#define GLOB_FILE_EXTENSION_SOURCE ".as"
 typedef int BOOL;
 
 typedef enum GLOB_OPCODE {
@@ -55,6 +57,7 @@ typedef enum GLOB_ERROR {
             GLOB_ERROR_PARSING_FAILED,
             GLOB_ERROR_FORBIDDEN_IDENTIFIER,
             GLOB_ERROR_TOO_LONG_LABEL,
+            GLOB_ERROR_INVALID_PARAMETERS,
             GLOB_ERROR_UNKNOWN,
             
 } GLOB_ERROR;

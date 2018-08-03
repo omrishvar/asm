@@ -38,6 +38,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/LEX.o \
 	${OBJECTDIR}/LINESTR.o \
 	${OBJECTDIR}/compiler.o \
+	${OBJECTDIR}/helper.o \
 	${OBJECTDIR}/list.o \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/parser.o \
@@ -82,6 +83,11 @@ ${OBJECTDIR}/compiler.o: compiler.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -g -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/compiler.o compiler.c
+
+${OBJECTDIR}/helper.o: helper.c
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -g -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/helper.o helper.c
 
 ${OBJECTDIR}/list.o: list.c
 	${MKDIR} -p ${OBJECTDIR}

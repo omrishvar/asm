@@ -35,6 +35,7 @@ static LEX_STATUS g_eStatus = LEX_STATUS_NOT_OPENED;
 static PLINESTR_LINE g_ptCurrentLine = NULL;
 static int g_nCurrentColumn = 0;
 static int g_nCurrentLineLength = 0;
+static HLINESTR_FILE g_hFile = NULL; 
 
 GLOB_ERROR LEX_Open(const char * szFileName){
     GLOB_ERROR eRetValue = GLOB_SUCCESS;
@@ -42,7 +43,7 @@ GLOB_ERROR LEX_Open(const char * szFileName){
         // todo: error handling
         return GLOB_ERROR_INVALID_STATE;
     }
-    eRetValue = LINESTR_Open(szFileName);
+    eRetValue = LINESTR_Open(szFileName, &g_hFile);
     if(eRetValue) {
         return eRetValue;
     }
@@ -197,7 +198,7 @@ GLOB_ERROR lex_ParseAlpha(PLEX_TOKEN ptToken) {
     if (NULL == ptToken->uValue.szStr) {
         return GLOB_ERROR_SYS_CALL_ERROR();
     }
-    strncpy(ptToken->uValue.szStr, ptToken->nColumn, g_nCurrentColumn - ptToken->nColumn);
+    strncpy(ptToken->uValue.szStr,g_ptCurrentLine->szLine + ptToken->nColumn, g_nCurrentColumn - ptToken->nColumn);
     ptToken->eKind = bIsLabelDefinition ? LEX_TOKEN_KIND_LABEL : LEX_TOKEN_KIND_WORD;
     g_nCurrentColumn += bIsLabelDefinition; // skip ":" of label definition
     return GLOB_SUCCESS;
@@ -215,7 +216,7 @@ GLOB_ERROR LEX_ReadNextToken(PLEX_TOKEN * pptToken) {
     }
     // if ready to read line, read it
     if (LEX_STATUS_READY_TO_READ_LINE == g_eStatus) {
-        eRetValue = LINESTR_GetNextLine(&g_ptCurrentLine);
+        eRetValue = LINESTR_GetNextLine(g_hFile, &g_ptCurrentLine);
         if (eRetValue) {
             // including end of file
             return eRetValue;
@@ -336,7 +337,8 @@ void LEX_Close() {
     if (LEX_STATUS_NOT_OPENED == g_eStatus) {
         return;
     }
-    LINESTR_Close();
+    LINESTR_Close(g_hFile);
+    g_hFile = NULL;
     g_eStatus = LEX_STATUS_NOT_OPENED;
     if (NULL != g_ptCurrentLine) {
         LINESTR_FreeLine(g_ptCurrentLine);
