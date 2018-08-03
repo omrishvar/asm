@@ -13,6 +13,9 @@
 
 #ifndef GLOBAL_H
 #define GLOBAL_H
+
+#include <errno.h>
+
 #define FALSE 0
 #define TRUE 1
 
