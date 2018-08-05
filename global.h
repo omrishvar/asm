@@ -19,6 +19,7 @@
 #define FALSE 0
 #define TRUE 1
 
+#define ARRARY_ELEMENTS(arr)        ((sizeof((arr))/sizeof((arr)[0])))
 #define GLOB_ERROR_SYS_CALL_ERROR()   (GLOB_ERROR_SYS_CALL_FAILED | errno)
 #define TERMINATE_STRING(str)   ((str)[sizeof((str))-1] = '\0')
 
@@ -61,6 +62,7 @@ typedef enum GLOB_ERROR {
             GLOB_ERROR_FORBIDDEN_IDENTIFIER,
             GLOB_ERROR_TOO_LONG_LABEL,
             GLOB_ERROR_INVALID_PARAMETERS,
+            GLOB_ERROR_CONTINUE,
             GLOB_ERROR_UNKNOWN,
             
 } GLOB_ERROR;

@@ -57,7 +57,7 @@ typedef enum LEX_TOKEN_FLAGS {
     /* The flag is set if there is no white chars (spaces, tabs) from the
      * previous token. */
     LEX_TOKEN_FLAGS_NO_SPACE_FROM_PREV_TOKEN = 2,
-} LEX_TOKEN_FLAGS;
+} LEX_TOKEN_FLAGS, *PLEX_TOKEN_FLAGS;
 
 /* LEX_TOKEN encapsulates the information about a token. The caller must free
  * the token with LEX_FreeToken. */
