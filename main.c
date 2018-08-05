@@ -28,27 +28,28 @@ int main(int argc, char *argv[]) {
     FILE * ptFilePointer;
     char singleLine[81];
     GLOB_ERROR eRetValue;
+    HLEX_FILE hFile;
     /*int usedRows=0;
     struct token_list **pTokenListArray;*/
     
     
     ///////////////
 
-    eRetValue = LEX_Open("sample");
+    eRetValue = LEX_Open("sample", &hFile);
     if (eRetValue) {
         return 1;
     }
 
     while (1) {
         PLEX_TOKEN ptToken = NULL;
-        eRetValue = LEX_ReadNextToken(&ptToken);
+        eRetValue = LEX_ReadNextToken(hFile, &ptToken);
         if (GLOB_ERROR_END_OF_FILE == eRetValue) {
             printf("EOF\n");
             break;
         }
         if (GLOB_ERROR_END_OF_LINE == eRetValue) {
             printf("----------------\n");
-            eRetValue = LEX_MoveToNextLine();
+            eRetValue = LEX_MoveToNextLine(hFile);
             if (eRetValue) {
                 printf("LEX_MoveToNextLine failed\n");
                 break;
@@ -66,7 +67,7 @@ int main(int argc, char *argv[]) {
     return 0;
     ///////////////
     
-    if(2 != argc) {
+/*    if(2 != argc) {
         printf("wrong number of arguments!\nUsage: %s <filename>\n", argv[0]);
         return 1;
     }
@@ -77,7 +78,7 @@ int main(int argc, char *argv[]) {
     
     while(fgets(singleLine,81,ptFilePointer) != NULL) {
         puts(singleLine);
-    }
+    }*/
 
     
     /*pTokenListArray=parser_parse(argv[1], &usedRows);

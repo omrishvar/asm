@@ -16,9 +16,10 @@
  *****************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "global.h"
 #include "helper.h"
-#include "LINESTR.h"
+#include "linestr.h"
 
 /******************************************************************************
  * TYPEDEFS
@@ -26,8 +27,7 @@
 
 /* LINESTR_FILE is the struct behind the the HLINESTR_FILE.
  * It keeps the FILE* to the file itself and the number of the
- * next row to be read  
- */
+ * next row to be read  */
 struct LINESTR_FILE {
     /* The source file */
     FILE * phSourceFile;
@@ -115,7 +115,7 @@ GLOB_ERROR LINESTR_GetNextLine(HLINESTR_FILE hFile, PLINESTR_LINE * pptLine) {
         eRetVal = GLOB_ERROR_SYS_CALL_ERROR();
         free(ptLine);
         /* fgets returns NULL in case of either error or EOF, so check it */
-        return feof(ptLine->szLine) ? GLOB_ERROR_END_OF_FILE : eRetVal;
+        return feof(hFile->phSourceFile) ? GLOB_ERROR_END_OF_FILE : eRetVal;
     }
 
     TERMINATE_STRING(ptLine->szLine);

@@ -49,7 +49,7 @@ typedef struct LINESTR_LINE {
  * Purpose: The function opens a source file. The caller gets a handle to the
  *          opened file.
  * Parameters:
- *          szFileName [IN] - the path to the file to open
+ *          szFileName [IN] - the path to the file to open (w/o the extension)
  *          phFile [OUT] - the handle to the opened file
  * Return Value:
  *          Upon successful completion, GLOB_SUCCESS is returned.
