@@ -15,4 +15,5 @@
 #define HELPER_H
 
 char * HELPER_ConcatStrings(const char * pszStr1, const char * pszStr2);
+int HELPER_FindInStringsArray(const char ** paszStringsArray, int nArrayElements, const char * pszStr, int nStrLength);
 #endif /* HELPER_H */

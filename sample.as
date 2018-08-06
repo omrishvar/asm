@@ -1,6 +1,6 @@
+"Hello"
 ;sdfsdfsdf
-;sdfsdfsdf
-.data   .string
+.data +444  .string
 
 mov r3, r2
 add r4,#567

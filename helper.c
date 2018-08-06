@@ -26,3 +26,12 @@ char * HELPER_ConcatStrings(const char * pszStr1, const char * pszStr2) {
     return pszResult;
     
 }    
+
+int HELPER_FindInStringsArray(const char ** paszStringsArray, int nArrayElements, const char * pszStr, int nStrLength) {
+    for (int i = 0; i < nArrayElements; i++) {
+        if (strlen(paszStringsArray[i]) == nStrLength && 0 == strncmp(paszStringsArray[i], pszStr, nStrLength)) {
+            return i;
+        }
+    }
+    return -1;
+}

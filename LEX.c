@@ -20,9 +20,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <stdarg.h>
 #include <ctype.h>
 #include "linestr.h"
 #include "global.h"
+#include "helper.h"
 #include "LEX.h"
 
 /******************************************************************************
@@ -72,6 +74,7 @@ static GLOB_ERROR lex_ParseSpecialChar(HLEX_FILE hFile, PLEX_TOKEN ptToken);
 static GLOB_ERROR lex_ParseDirective(HLEX_FILE hFile, PLEX_TOKEN ptToken);
 static GLOB_ERROR lex_ParseImmediateNumber(HLEX_FILE hFile, PLEX_TOKEN ptToken);
 static GLOB_ERROR lex_ParseNumber(HLEX_FILE hFile, PLEX_TOKEN ptToken);
+static GLOB_ERROR lex_ParseString(HLEX_FILE hFile, PLEX_TOKEN ptToken);
 static GLOB_ERROR lex_ParseAlpha(HLEX_FILE hFile, PLEX_TOKEN ptToken);
 
 /******************************************************************************
@@ -83,16 +86,37 @@ static GLOB_ERROR lex_ParseAlpha(HLEX_FILE hFile, PLEX_TOKEN ptToken);
 static const char * g_aszOpcodes[] = {"mov", "cmp", "add", "sub", "not", "clr",
     "lea", "inc", "dec", "jmp", "bne", "red", "prn", "jsr", "rts", "stop"};
 
+/* This constant array contains the strings of the directives in the language.
+ * Note: The index of a directive is equal to its GLOB_DIRECTIVE value. */
+static const char * g_aszDirectives[] = {"data", "string", "entry", "extern"};
+
 /* array of the parsers. The module tries to parse the token text with each
  * parser in this constant array */
 static const LEX_PARSER g_afParsers[] = {
     lex_ParseRemark, lex_ParseSpecialChar,
     lex_ParseDirective, lex_ParseImmediateNumber,
-    lex_ParseNumber, lex_ParseAlpha};
+    lex_ParseNumber, lex_ParseString, lex_ParseAlpha};
 
 /******************************************************************************
  * INTERNAL FUNCTIONS
  *****************************************************************************/
+
+// TODO 
+static void lex_ReportError(HLEX_FILE hFile, BOOL bIsError, int nColumn,
+                            const char * pszErrorFormat, ...) {
+    int nIndex = 0;
+    printf("%s:%d:%d %s: ", LINESTR_GetFullFileName(hFile->hSourceFile), hFile->ptCurrentLine->nLineNumber,
+            nColumn+1, bIsError ? "error" : "warning");
+    va_list args;
+    va_start (args, pszErrorFormat);
+    vprintf (pszErrorFormat, args);
+    va_end (args);
+    printf("\n%s\n", hFile->ptCurrentLine->szLine);
+    for (nIndex = 0; nIndex < nColumn; nIndex++){
+        printf(" ");
+    }
+    printf("^\n");
+}
 
 /******************************************************************************
  * Name:    lex_ParseRemark
@@ -108,6 +132,7 @@ static GLOB_ERROR lex_ParseRemark(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
     if (';' != hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]) {
         return GLOB_ERROR_CONTINUE;
     }
+    
     ptToken->eKind = LEX_TOKEN_KIND_REMARK;
     /* Move to the end of line */
     hFile->nCurrentColumn = hFile->nCurrentLineLength;
@@ -147,34 +172,241 @@ static GLOB_ERROR lex_ParseSpecialChar(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
  *****************************************************************************/
 static GLOB_ERROR lex_ParseDirective(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
     int nTokenLength = 0;
+    int nDirectiveIndex = 0;
     
     /* Directives start with the "." character. */
     if ('.' != hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]) {
         return GLOB_ERROR_CONTINUE;
     }
     
+    /* Skip the '.' */
     hFile->nCurrentColumn++;
+    
+    /* Read the directive name */
     while ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
             && isalpha(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
         hFile->nCurrentColumn++;
     }
-    nTokenLength = hFile->nCurrentColumn - ptToken->nColumn;
-    // bug error length
-    // todo: check of by 1
-    if (0 == strncmp(".data", hFile->ptCurrentLine->szLine+ptToken->nColumn, nTokenLength)) {
-        ptToken->uValue.eDiretive = GLOB_DIRECTIVE_DATA;
-    } else if (0 == strncmp(".string", hFile->ptCurrentLine->szLine+ptToken->nColumn, nTokenLength)) {
-        ptToken->uValue.eDiretive = GLOB_DIRECTIVE_STRING;
-    } else if (0 == strncmp(".entry", hFile->ptCurrentLine->szLine+ptToken->nColumn, nTokenLength)) {
-        ptToken->uValue.eDiretive = GLOB_DIRECTIVE_ENTRY;
-    } else if (0 == strncmp(".extern", hFile->ptCurrentLine->szLine+ptToken->nColumn, nTokenLength)) {
-        ptToken->uValue.eDiretive = GLOB_DIRECTIVE_EXTERN;
-    } else {
-        // unknown directive
-        // todo error handling
+    
+    /* Calculate the directive length (without the '.') */
+    nTokenLength = hFile->nCurrentColumn - ptToken->nColumn - 1;
+    
+    /* Search the directives array */
+    nDirectiveIndex = HELPER_FindInStringsArray(
+                g_aszDirectives,
+                ARRAY_ELEMENTS(g_aszDirectives),
+                hFile->ptCurrentLine->szLine+ptToken->nColumn+1,
+                nTokenLength);
+    
+    if (-1 == nDirectiveIndex) {
+        /* Unknown directive error */
+        lex_ReportError(hFile, TRUE, ptToken->nColumn, "Unknown directive");
         return GLOB_ERROR_PARSING_FAILED;
     }
+    ptToken->uValue.eDiretive = (GLOB_DIRECTIVE)nDirectiveIndex;
     ptToken->eKind = LEX_TOKEN_KIND_DIRECTIVE;
+    return GLOB_SUCCESS;
+}
+
+/******************************************************************************
+ * Name:    lex_ParseImmediateNumber
+ * Purpose: Parse immediate numbers (such as "#-780")
+ * Parameters:
+ *          see LEX_PARSER declaration above
+ * Return Value:
+ *          see LEX_PARSER declaration above
+ *****************************************************************************/
+static GLOB_ERROR lex_ParseImmediateNumber(HLEX_FILE hFile, PLEX_TOKEN ptToken){
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+    
+    /* Check for the '#' sign */
+    if ('#' != hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]) {
+        return GLOB_ERROR_CONTINUE;
+    }
+    /* Skip it. */
+    hFile->nCurrentColumn++;
+    
+    /* Now we expect a number*/
+    eRetValue = lex_ParseNumber(hFile, ptToken);
+    if (GLOB_ERROR_CONTINUE == eRetValue) {
+        lex_ReportError(hFile, TRUE, hFile->nCurrentColumn, "a number is expected");
+        return GLOB_ERROR_PARSING_FAILED;
+    }
+    if (eRetValue) {
+        return eRetValue;
+    }
+    ptToken->eKind = LEX_TOKEN_KIND_IMMED_NUMBER;
+    return GLOB_SUCCESS;
+}
+
+/******************************************************************************
+ * Name:    lex_ParseNumber
+ * Purpose: Parse numbers (such as "-780")
+ * Parameters:
+ *          see LEX_PARSER declaration above
+ * Return Value:
+ *          see LEX_PARSER declaration above
+ *****************************************************************************/
+static GLOB_ERROR lex_ParseNumber(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
+    BOOL bFoundDigit = FALSE;
+    BOOL bIsMinus = FALSE;
+    BOOL bIsPlus = FALSE;
+    int nValue = 0;
+    
+    /* the first char may be a digit, a plus or a minus sign */
+    bIsMinus = ('-' == hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]);
+    bIsPlus = ('+' == hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]);
+    if (!bIsMinus && !bIsPlus
+            && !isdigit(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
+        return GLOB_ERROR_CONTINUE;
+    }
+    
+    /* Skip the sign */
+    if (bIsMinus || bIsPlus) {
+        hFile->nCurrentColumn++;
+    }
+    
+    /* Now we expect the value (digits) */
+    while ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
+            && isdigit(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
+        bFoundDigit = TRUE;
+        nValue = 10*nValue + hFile->ptCurrentLine->szLine[hFile->nCurrentColumn] - '0';
+        hFile->nCurrentColumn++;
+    }
+    
+    /* Check that we have at least one digit */
+    if (!bFoundDigit) {
+        lex_ReportError(hFile, TRUE, ptToken->nColumn, "A number must incluse at least one digit");
+        return GLOB_ERROR_PARSING_FAILED;
+    }
+    
+    /* Set the value */
+    ptToken->eKind = LEX_TOKEN_KIND_NUMBER;
+    ptToken->uValue.nNumber = bIsMinus ? -nValue : nValue;
+    return GLOB_SUCCESS;
+}
+
+/******************************************************************************
+ * Name:    lex_ParseString
+ * Purpose: Parse strings ("...")
+ * Parameters:
+ *          see LEX_PARSER declaration above
+ * Return Value:
+ *          see LEX_PARSER declaration above
+ *****************************************************************************/
+GLOB_ERROR lex_ParseString(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
+    /* Strings begin with the '"' character*/
+    if ('"' != hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]) {
+        return GLOB_ERROR_CONTINUE;
+    }
+    
+    /* Skip the opening '"' */
+    hFile->nCurrentColumn++;
+    
+    /* Now we are searching for the closing '"' */
+    while ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
+            && ('"' != hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
+        hFile->nCurrentColumn++;
+    }
+    
+    /* If we didn't find the closing '"', report error */
+    if (hFile->nCurrentColumn >= hFile->nCurrentLineLength) {
+        lex_ReportError(hFile, TRUE, ptToken->nColumn, "No closing \" found");
+        return GLOB_ERROR_PARSING_FAILED;
+    }
+    
+    /* Allocate space for the value of the token */
+    ptToken->uValue.szStr = malloc(hFile->nCurrentColumn - ptToken->nColumn -1);
+    if (NULL == ptToken->uValue.szStr) {
+        return GLOB_ERROR_SYS_CALL_ERROR();
+    }
+    strncpy(ptToken->uValue.szStr,
+        hFile->ptCurrentLine->szLine + ptToken-> nColumn + 1,
+        hFile->nCurrentColumn - ptToken->nColumn - 2);
+    /* Skip the closing '"' */
+    hFile->nCurrentColumn++;
+    
+    ptToken->eKind = LEX_TOKEN_KIND_STRING;
+    return GLOB_SUCCESS;
+}
+
+/******************************************************************************
+ * Name:    lex_ParseAlpha
+ * Purpose: Parse tokens that start with a letter
+ * Parameters:
+ *          see LEX_PARSER declaration above
+ * Return Value:
+ *          see LEX_PARSER declaration above
+ *****************************************************************************/
+static GLOB_ERROR lex_ParseAlpha(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
+    BOOL bIsLabelDefinition = FALSE;
+    int nIdentifierLength = 0;
+    int nOpcode = -1;
+    
+    if (!isalpha(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
+        return GLOB_ERROR_CONTINUE;
+    }
+    hFile->nCurrentColumn++; // skip the first char
+    
+    // next chars may be alpha or digits
+    while ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
+            && (isalpha(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])
+                ||isdigit(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]))) {
+        hFile->nCurrentColumn++;
+    }
+    // check for the maximum length
+    nIdentifierLength = hFile->nCurrentColumn - ptToken->nColumn;
+    if (nIdentifierLength  > 31) {
+        // todo error handling
+        return GLOB_ERROR_TOO_LONG_LABEL;
+    }
+    bIsLabelDefinition =  ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
+            && ':' == hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]);
+    
+    // check for opcode
+    nOpcode = HELPER_FindInStringsArray(g_aszOpcodes, 16, hFile->ptCurrentLine->szLine + ptToken->nColumn, nIdentifierLength);
+    if (-1 != nOpcode) { 
+        if (bIsLabelDefinition) {
+            // can't use the register name as a label
+            // todo error handling
+            return GLOB_ERROR_FORBIDDEN_IDENTIFIER;
+        }
+        ptToken->eKind = LEX_TOKEN_KIND_OPCODE;
+        ptToken->uValue.eOpcode = nOpcode;
+        return GLOB_SUCCESS;
+    }
+    
+    // check for register
+    if ((2 == nIdentifierLength)
+            && ('0' <= hFile->ptCurrentLine->szLine[ptToken->nColumn+1])
+            && ('7' >= hFile->ptCurrentLine->szLine[ptToken->nColumn+1])) { 
+        if (bIsLabelDefinition) {
+            // can't use the register name as a label
+            // todo error handling
+            return GLOB_ERROR_FORBIDDEN_IDENTIFIER;
+        }
+        ptToken->eKind = LEX_TOKEN_KIND_REGISTER;
+        ptToken->uValue.nNumber = hFile->ptCurrentLine->szLine[ptToken->nColumn+1] - '0';
+        return GLOB_SUCCESS;
+    }
+    
+    // check for other forbidden identirifiers
+    if ((0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "data", nIdentifierLength))
+        || (0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "string", nIdentifierLength))
+        || (0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "extern", nIdentifierLength))
+        || (0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "entry", nIdentifierLength)))
+    {
+        // todo error handling
+        return GLOB_ERROR_FORBIDDEN_IDENTIFIER;
+    }
+    
+    ptToken->uValue.szStr = malloc(hFile->nCurrentColumn - ptToken->nColumn + 1);
+    if (NULL == ptToken->uValue.szStr) {
+        return GLOB_ERROR_SYS_CALL_ERROR();
+    }
+    strncpy(ptToken->uValue.szStr,hFile->ptCurrentLine->szLine + ptToken->nColumn, hFile->nCurrentColumn - ptToken->nColumn);
+    ptToken->eKind = bIsLabelDefinition ? LEX_TOKEN_KIND_LABEL : LEX_TOKEN_KIND_WORD;
+    hFile->nCurrentColumn += bIsLabelDefinition; // skip ":" of label definition
     return GLOB_SUCCESS;
 }
 
@@ -220,163 +452,6 @@ GLOB_ERROR LEX_Open(const char * szFileName, PHLEX_FILE phFile){
     return GLOB_SUCCESS;
 }
 
-static GLOB_ERROR lex_ParseImmediateNumber(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
-    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
-    
-    /* Check for the '#' sign */
-    if ('#' != hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]) {
-        return GLOB_ERROR_CONTINUE;
-    }
-    /* Skip it. */
-    hFile->nCurrentColumn++;
-    
-    /* Now we expect a number*/
-    eRetValue = lex_ParseNumber(hFile, ptToken);
-    if (GLOB_ERROR_CONTINUE == eRetValue) {
-        // expecting number
-        return GLOB_ERROR_PARSING_FAILED;
-    }
-    if (eRetValue) {
-        return eRetValue;
-    }
-    ptToken->eKind = LEX_TOKEN_KIND_IMMED_NUMBER;
-    return GLOB_SUCCESS;
-}
-
-static GLOB_ERROR lex_ParseNumber(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
-    BOOL bFoundDigit = FALSE;
-    BOOL bIsMinus = FALSE;
-    BOOL bIsPlus = FALSE;
-    int nValue = 0;
-    
-    hFile->nCurrentColumn++; // skip the '#'
-    // the current char may be a digit, a plus or a minus sign
-    bIsMinus = ('-' == hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]);
-    bIsMinus = ('+' == hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]);
-    if (!bIsMinus && !bIsPlus && !isdigit(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
-        return GLOB_ERROR_CONTINUE;
-    }
-    if (bIsMinus || bIsPlus) {
-        hFile->nCurrentColumn++;
-    }
-    while ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
-            && isdigit(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
-        bFoundDigit = TRUE;
-        nValue = 10*nValue + hFile->ptCurrentLine->szLine[hFile->nCurrentColumn] - '0';
-        hFile->nCurrentColumn++;
-    }
-    if (!bFoundDigit) {
-        // must include at least one digit
-        return GLOB_ERROR_PARSING_FAILED;
-    }
-    ptToken->eKind = LEX_TOKEN_KIND_NUMBER;
-    ptToken->uValue.nNumber = bIsMinus ? -nValue : nValue;
-    return GLOB_SUCCESS;
-}
-
-GLOB_ERROR lex_ParseString(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
-    if ('"' != hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]) {
-        return GLOB_ERROR_CONTINUE;
-    }
-    hFile->nCurrentColumn++; // skip the '"'
-    // the current char may be a digit, a plus or a minus sign
-    while ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
-            && ('"' != hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
-        hFile->nCurrentColumn++;
-    }
-    if (hFile->nCurrentColumn == hFile->nCurrentLineLength) {
-        // didn't find closing '"'
-        return GLOB_ERROR_PARSING_FAILED;
-    }
-    ptToken->uValue.szStr = malloc(hFile->nCurrentColumn - ptToken->nColumn - 1);
-    if (NULL == ptToken->uValue.szStr) {
-        return GLOB_ERROR_SYS_CALL_ERROR();
-    }
-    strncpy(ptToken->uValue.szStr, hFile->ptCurrentLine->szLine + ptToken-> nColumn + 1, hFile->nCurrentColumn - ptToken->nColumn - 2);
-    ptToken->eKind = LEX_TOKEN_KIND_STRING;
-    return GLOB_SUCCESS;
-}
-
-int lex_FindInStringsArray(const char ** paszStringsArray, int nArrayElements, const char * pszStr, int nStrLength) {
-    for (int i = 0; i < nArrayElements; i++) {
-        if (0 == strncmp(paszStringsArray[i], pszStr, nStrLength)) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-static GLOB_ERROR lex_ParseAlpha(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
-    BOOL bIsLabelDefinition = FALSE;
-    int nIdentifierLength = 0;
-    int nOpcode = -1;
-    
-    if (!isalpha(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
-        return GLOB_ERROR_CONTINUE;
-    }
-    hFile->nCurrentColumn++; // skip the first char
-    
-    // next chars may be alpha or digits
-    while ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
-            && (isalpha(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])
-                ||isdigit(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]))) {
-        hFile->nCurrentColumn++;
-    }
-    // check for the maximum length
-    nIdentifierLength = hFile->nCurrentColumn - ptToken->nColumn;
-    if (nIdentifierLength  > 31) {
-        // todo error handling
-        return GLOB_ERROR_TOO_LONG_LABEL;
-    }
-    bIsLabelDefinition =  ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
-            && ':' == hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]);
-    
-    // check for opcode
-    nOpcode = lex_FindInStringsArray(g_aszOpcodes, 16, hFile->ptCurrentLine->szLine + ptToken->nColumn, nIdentifierLength);
-    if (-1 != nOpcode) { 
-        if (bIsLabelDefinition) {
-            // can't use the register name as a label
-            // todo error handling
-            return GLOB_ERROR_FORBIDDEN_IDENTIFIER;
-        }
-        ptToken->eKind = LEX_TOKEN_KIND_OPCODE;
-        ptToken->uValue.eOpcode = nOpcode;
-        return GLOB_SUCCESS;
-    }
-    
-    // check for register
-    if ((2 == nIdentifierLength)
-            && ('0' <= hFile->ptCurrentLine->szLine[ptToken->nColumn+1])
-            && ('7' >= hFile->ptCurrentLine->szLine[ptToken->nColumn+1])) { 
-        if (bIsLabelDefinition) {
-            // can't use the register name as a label
-            // todo error handling
-            return GLOB_ERROR_FORBIDDEN_IDENTIFIER;
-        }
-        ptToken->eKind = LEX_TOKEN_KIND_REGISTER;
-        ptToken->uValue.nNumber = hFile->ptCurrentLine->szLine[ptToken->nColumn+1] - '0';
-        return GLOB_SUCCESS;
-    }
-    
-    // check for other forbidden identirifiers
-    if ((0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "data", nIdentifierLength))
-        || (0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "string", nIdentifierLength))
-        || (0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "extern", nIdentifierLength))
-        || (0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "entry", nIdentifierLength)))
-    {
-        // todo error handling
-        return GLOB_ERROR_FORBIDDEN_IDENTIFIER;
-    }
-    
-    ptToken->uValue.szStr = malloc(hFile->nCurrentColumn - ptToken->nColumn + 1);
-    if (NULL == ptToken->uValue.szStr) {
-        return GLOB_ERROR_SYS_CALL_ERROR();
-    }
-    strncpy(ptToken->uValue.szStr,hFile->ptCurrentLine->szLine + ptToken->nColumn, hFile->nCurrentColumn - ptToken->nColumn);
-    ptToken->eKind = bIsLabelDefinition ? LEX_TOKEN_KIND_LABEL : LEX_TOKEN_KIND_WORD;
-    hFile->nCurrentColumn += bIsLabelDefinition; // skip ":" of label definition
-    return GLOB_SUCCESS;
-}
 /******************************************************************************
  * Name:    lex_MoveToNextToken
  * Purpose: The function moves the parser position to the next token to parse
@@ -461,7 +536,7 @@ GLOB_ERROR LEX_ReadNextToken(HLEX_FILE hFile, PLEX_TOKEN * pptToken) {
     ptToken->nColumn = hFile->nCurrentColumn;
     
     for (int nParserIndex = 0;
-            nParserIndex < ARRARY_ELEMENTS(g_afParsers);
+            nParserIndex < ARRAY_ELEMENTS(g_afParsers);
             nParserIndex++) {
         eRetValue = g_afParsers[nParserIndex](hFile, ptToken);
         if (GLOB_ERROR_CONTINUE != eRetValue) {

@@ -29,6 +29,10 @@
  * It keeps the FILE* to the file itself and the number of the
  * next row to be read  */
 struct LINESTR_FILE {
+    
+    /* Full source file name */
+    char * pszFullFileName;
+    
     /* The source file */
     FILE * phSourceFile;
     
@@ -48,7 +52,6 @@ struct LINESTR_FILE {
 GLOB_ERROR LINESTR_Open(const char * szFileName,  PHLINESTR_FILE phFile) {
     HLINESTR_FILE hFile = NULL;
     GLOB_ERROR eRetVal = GLOB_ERROR_UNKNOWN;
-    char * szFullFileName = NULL;
     
     /* Check parameters */
     if (NULL == szFileName || NULL == phFile) {
@@ -62,20 +65,20 @@ GLOB_ERROR LINESTR_Open(const char * szFileName,  PHLINESTR_FILE phFile) {
     }
     
     /* Get the full file name to open */
-    szFullFileName = HELPER_ConcatStrings(szFileName,
+    hFile->pszFullFileName = HELPER_ConcatStrings(szFileName,
         GLOB_FILE_EXTENSION_SOURCE);
-    if (NULL == szFullFileName) {
+    if (NULL == hFile->pszFullFileName) {
         eRetVal = GLOB_ERROR_SYS_CALL_ERROR();
         free(hFile);
         return eRetVal;
     }
 
     /* Open the file */
-    hFile->phSourceFile = fopen(szFullFileName, "r");
+    hFile->phSourceFile = fopen(hFile->pszFullFileName, "r");
     if (hFile->phSourceFile == NULL) {
         eRetVal = GLOB_ERROR_SYS_CALL_ERROR();
+        free(hFile->pszFullFileName);
         free(hFile);
-        free(szFullFileName);
         return eRetVal;
     }
     
@@ -84,10 +87,18 @@ GLOB_ERROR LINESTR_Open(const char * szFileName,  PHLINESTR_FILE phFile) {
     
     /* Set out parameter upon success */
     *phFile = hFile;
-    free(szFullFileName);
     return GLOB_SUCCESS;
 }
 
+/******************************************************************************
+ * LINESTR_GetFullFileName
+ *****************************************************************************/
+const char * LINESTR_GetFullFileName(HLINESTR_FILE hFile) {
+    if (NULL == hFile) {
+        return NULL;
+    }
+    return hFile->pszFullFileName;
+}
 /******************************************************************************
  * LINESTR_GetNextLine
  *****************************************************************************/
@@ -148,6 +159,7 @@ void LINESTR_FreeLine(PLINESTR_LINE ptLine) {
 void LINESTR_Close(HLINESTR_FILE hFile) {
     if (NULL != hFile) {
         fclose(hFile->phSourceFile);
+        free(hFile->pszFullFileName);
         free(hFile);
     }
 }

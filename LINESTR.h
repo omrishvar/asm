@@ -60,6 +60,17 @@ typedef struct LINESTR_LINE {
 GLOB_ERROR LINESTR_Open(const char * szFilenName, PHLINESTR_FILE phFile);
 
 /******************************************************************************
+ * Name:    LINESTR_GetFullFileName
+ * Purpose: Get the full file name of a file opened with LINESTR_Open
+ * Parameters:
+ *          hFile [IN] - the handle to the file
+ * Return Value:
+ *          A pointer to a string with the full file name. The caller should not
+ *          change the string and can use it until a call to LINESTR_Close
+ *****************************************************************************/
+const char * LINESTR_GetFullFileName(HLINESTR_FILE hFile);
+
+/******************************************************************************
  * Name:    LINESTR_GetNextLine
  * Purpose: The function reads the next line from the file
  * Parameters:
