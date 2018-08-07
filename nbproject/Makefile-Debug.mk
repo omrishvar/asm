@@ -35,10 +35,10 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/LEX.o \
-	${OBJECTDIR}/LINESTR.o \
 	${OBJECTDIR}/compiler.o \
 	${OBJECTDIR}/helper.o \
+	${OBJECTDIR}/lex.o \
+	${OBJECTDIR}/linestr.o \
 	${OBJECTDIR}/list.o \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/parser.o \
@@ -69,16 +69,6 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/asm: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/asm ${OBJECTFILES} ${LDLIBSOPTIONS}
 
-${OBJECTDIR}/LEX.o: LEX.c
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.c) -g -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/LEX.o LEX.c
-
-${OBJECTDIR}/LINESTR.o: LINESTR.c
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.c) -g -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/LINESTR.o LINESTR.c
-
 ${OBJECTDIR}/compiler.o: compiler.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
@@ -88,6 +78,16 @@ ${OBJECTDIR}/helper.o: helper.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -g -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/helper.o helper.c
+
+${OBJECTDIR}/lex.o: lex.c
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -g -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/lex.o lex.c
+
+${OBJECTDIR}/linestr.o: linestr.c
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -g -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/linestr.o linestr.c
 
 ${OBJECTDIR}/list.o: list.c
 	${MKDIR} -p ${OBJECTDIR}

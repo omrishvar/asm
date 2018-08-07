@@ -131,7 +131,7 @@ static void lex_ReportError(HLEX_FILE hFile, BOOL bIsError, int nColumn,
     printf("%s:%d:%d %s: ", LINESTR_GetFullFileName(hFile->hSourceFile), hFile->ptCurrentLine->nLineNumber,
             nColumn+1, bIsError ? "error" : "warning");
     va_list vaArgs;
-    va_start (args, pszErrorFormat);
+    va_start (vaArgs, pszErrorFormat);
     vprintf (pszErrorFormat, vaArgs);
     va_end (vaArgs);
     

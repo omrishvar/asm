@@ -4,11 +4,11 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>LEX.h</itemPath>
       <itemPath>LINESTR.h</itemPath>
       <itemPath>compiler.h</itemPath>
       <itemPath>global.h</itemPath>
       <itemPath>helper.h</itemPath>
+      <itemPath>lex.h</itemPath>
       <itemPath>line.h</itemPath>
       <itemPath>list.h</itemPath>
       <itemPath>parser.h</itemPath>
@@ -21,10 +21,10 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>LEX.c</itemPath>
-      <itemPath>LINESTR.c</itemPath>
       <itemPath>compiler.c</itemPath>
       <itemPath>helper.c</itemPath>
+      <itemPath>lex.c</itemPath>
+      <itemPath>linestr.c</itemPath>
       <itemPath>list.c</itemPath>
       <itemPath>main.c</itemPath>
       <itemPath>parser.c</itemPath>
@@ -86,12 +86,6 @@
           </linkerDynSerch>
         </linkerTool>
       </compileType>
-      <item path="LEX.c" ex="false" tool="0" flavor2="0">
-      </item>
-      <item path="LEX.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="LINESTR.c" ex="false" tool="0" flavor2="0">
-      </item>
       <item path="LINESTR.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="bacon" ex="false" tool="3" flavor2="0">
@@ -126,7 +120,13 @@
       </item>
       <item path="helper.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="lex.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="lex.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="line.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="linestr.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="list.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -184,12 +184,6 @@
           </linkerDynSerch>
         </linkerTool>
       </compileType>
-      <item path="LEX.c" ex="false" tool="0" flavor2="0">
-      </item>
-      <item path="LEX.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="LINESTR.c" ex="false" tool="0" flavor2="0">
-      </item>
       <item path="LINESTR.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="bacon" ex="false" tool="3" flavor2="0">
@@ -223,7 +217,13 @@
       </item>
       <item path="helper.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="lex.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="lex.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="line.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="linestr.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="list.c" ex="false" tool="0" flavor2="0">
       </item>
