@@ -6,10 +6,8 @@
  * types as described below.
  * 
  * Implementation:
- * TODO
- * File I/O operations are performed with standard C library functions.
- * The LINESTR_HANDLE contains the information for reading the next lines from
- * the source file and counting the rows.
+ * The LEX modules uses LINESTR to read the source file into lines.
+ * It goes over the lines and parse the text into tokens from different types.
  *****************************************************************************/
 
 /******************************************************************************
@@ -25,7 +23,14 @@
 #include "linestr.h"
 #include "global.h"
 #include "helper.h"
-#include "LEX.h"
+#include "lex.h"
+
+/******************************************************************************
+ * CONSTANTS & MACROS
+ *****************************************************************************/
+
+/* The maximum length (in characters) of a label */
+#define LEX_MAX_LABEL_LENGTH 31
 
 /******************************************************************************
  * TYPEDEFS
@@ -69,6 +74,8 @@ typedef GLOB_ERROR (*LEX_PARSER)(HLEX_FILE hFile, PLEX_TOKEN ptToken);
  * -------------------------------
  * See function-level documentation next to the implementation below
  *****************************************************************************/
+static void lex_ReportError(HLEX_FILE hFile, BOOL bIsError, int nColumn,
+                            const char * pszErrorFormat, ...);
 static GLOB_ERROR lex_ParseRemark(HLEX_FILE hFile, PLEX_TOKEN ptToken);
 static GLOB_ERROR lex_ParseSpecialChar(HLEX_FILE hFile, PLEX_TOKEN ptToken);
 static GLOB_ERROR lex_ParseDirective(HLEX_FILE hFile, PLEX_TOKEN ptToken);
@@ -90,6 +97,11 @@ static const char * g_aszOpcodes[] = {"mov", "cmp", "add", "sub", "not", "clr",
  * Note: The index of a directive is equal to its GLOB_DIRECTIVE value. */
 static const char * g_aszDirectives[] = {"data", "string", "entry", "extern"};
 
+/* This constant array contains the strings of the registers in the language.
+ * Note: The index of a register is equal to its number */
+static const char * g_aszRegisters[] = {"r0", "r1", "r2", "r3",
+                                        "r4", "r5", "r6", "r7"};
+
 /* array of the parsers. The module tries to parse the token text with each
  * parser in this constant array */
 static const LEX_PARSER g_afParsers[] = {
@@ -101,17 +113,32 @@ static const LEX_PARSER g_afParsers[] = {
  * INTERNAL FUNCTIONS
  *****************************************************************************/
 
-// TODO 
+/******************************************************************************
+ * Name:    lex_ReportError
+ * Purpose: Print parsing error message
+ * Parameters:
+ *          hFile [IN] - handle to the current file
+ *          bIsError [IN] - TRUE for error. FALSE for warning
+ *          nColumn [IN] - zero-based column index of the error
+ *          pszErroFormat[IN] - error message (format as printf syntax)
+ *          ... [IN] - parameters to include in the message
+  *****************************************************************************/
 static void lex_ReportError(HLEX_FILE hFile, BOOL bIsError, int nColumn,
                             const char * pszErrorFormat, ...) {
     int nIndex = 0;
+    
+    /* Print the error message. */
     printf("%s:%d:%d %s: ", LINESTR_GetFullFileName(hFile->hSourceFile), hFile->ptCurrentLine->nLineNumber,
             nColumn+1, bIsError ? "error" : "warning");
-    va_list args;
+    va_list vaArgs;
     va_start (args, pszErrorFormat);
-    vprintf (pszErrorFormat, args);
-    va_end (args);
+    vprintf (pszErrorFormat, vaArgs);
+    va_end (vaArgs);
+    
+    /* Print the source line. */
     printf("\n%s\n", hFile->ptCurrentLine->szLine);
+    
+    /* Print an arrow below the error. */
     for (nIndex = 0; nIndex < nColumn; nIndex++){
         printf(" ");
     }
@@ -342,71 +369,82 @@ static GLOB_ERROR lex_ParseAlpha(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
     BOOL bIsLabelDefinition = FALSE;
     int nIdentifierLength = 0;
     int nOpcode = -1;
+    int nDirective = -1;
+    int nRegister = -1;
     
+    /* The first character should be a letter */
     if (!isalpha(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
         return GLOB_ERROR_CONTINUE;
     }
-    hFile->nCurrentColumn++; // skip the first char
+    /* Skip the first char */
+    hFile->nCurrentColumn++;
     
-    // next chars may be alpha or digits
+    /* The remaining characters may be either letters or digits */
     while ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
             && (isalpha(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])
                 ||isdigit(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]))) {
         hFile->nCurrentColumn++;
     }
-    // check for the maximum length
+    
+    /* Check for the maximum length */
     nIdentifierLength = hFile->nCurrentColumn - ptToken->nColumn;
-    if (nIdentifierLength  > 31) {
-        // todo error handling
-        return GLOB_ERROR_TOO_LONG_LABEL;
+    if (nIdentifierLength  > LEX_MAX_LABEL_LENGTH) {
+        lex_ReportError(hFile, TRUE, ptToken->nColumn, "Too long label");
+        return GLOB_ERROR_PARSING_FAILED;
     }
+    
+    /* Check if the next char is semi-colon, indicates label definition. */
     bIsLabelDefinition =  ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
             && ':' == hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]);
     
-    // check for opcode
-    nOpcode = HELPER_FindInStringsArray(g_aszOpcodes, 16, hFile->ptCurrentLine->szLine + ptToken->nColumn, nIdentifierLength);
-    if (-1 != nOpcode) { 
-        if (bIsLabelDefinition) {
-            // can't use the register name as a label
-            // todo error handling
-            return GLOB_ERROR_FORBIDDEN_IDENTIFIER;
-        }
+    /* Check if this is an opcode, register or directive*/
+    nOpcode = HELPER_FindInStringsArray(g_aszOpcodes,
+                ARRAY_ELEMENTS(g_aszOpcodes),
+                hFile->ptCurrentLine->szLine + ptToken->nColumn,
+                nIdentifierLength);
+    nRegister = HELPER_FindInStringsArray(g_aszRegisters,
+                ARRAY_ELEMENTS(g_aszRegisters),
+                hFile->ptCurrentLine->szLine + ptToken->nColumn,
+                nIdentifierLength);
+    nDirective = HELPER_FindInStringsArray(g_aszDirectives,
+                ARRAY_ELEMENTS(g_aszDirectives),
+                hFile->ptCurrentLine->szLine + ptToken->nColumn,
+                nIdentifierLength);
+    /* Opcode, Directive and Registers are forbidden as labels */
+    if ((-1 != nDirective) ||
+            (bIsLabelDefinition && ((-1 != nOpcode) || (-1 != nRegister)))) {
+        lex_ReportError(hFile, TRUE, ptToken->nColumn,
+                "Forbidden label name");
+        return GLOB_ERROR_PARSING_FAILED;
+    }
+    
+    /* Check for opcode. */
+    if (-1 != nOpcode) {
         ptToken->eKind = LEX_TOKEN_KIND_OPCODE;
         ptToken->uValue.eOpcode = nOpcode;
         return GLOB_SUCCESS;
     }
     
-    // check for register
-    if ((2 == nIdentifierLength)
-            && ('0' <= hFile->ptCurrentLine->szLine[ptToken->nColumn+1])
-            && ('7' >= hFile->ptCurrentLine->szLine[ptToken->nColumn+1])) { 
-        if (bIsLabelDefinition) {
-            // can't use the register name as a label
-            // todo error handling
-            return GLOB_ERROR_FORBIDDEN_IDENTIFIER;
-        }
+    /* Check for register. */
+    if (-1 != nRegister) {
         ptToken->eKind = LEX_TOKEN_KIND_REGISTER;
-        ptToken->uValue.nNumber = hFile->ptCurrentLine->szLine[ptToken->nColumn+1] - '0';
+        ptToken->uValue.nNumber = nRegister;
         return GLOB_SUCCESS;
     }
     
-    // check for other forbidden identirifiers
-    if ((0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "data", nIdentifierLength))
-        || (0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "string", nIdentifierLength))
-        || (0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "extern", nIdentifierLength))
-        || (0 == strncmp(hFile->ptCurrentLine->szLine + ptToken->nColumn, "entry", nIdentifierLength)))
-    {
-        // todo error handling
-        return GLOB_ERROR_FORBIDDEN_IDENTIFIER;
-    }
-    
-    ptToken->uValue.szStr = malloc(hFile->nCurrentColumn - ptToken->nColumn + 1);
+    /* For label (definition/usage) we need to copy the string */
+    ptToken->uValue.szStr = malloc(hFile->nCurrentColumn -ptToken->nColumn + 1);
     if (NULL == ptToken->uValue.szStr) {
         return GLOB_ERROR_SYS_CALL_ERROR();
     }
-    strncpy(ptToken->uValue.szStr,hFile->ptCurrentLine->szLine + ptToken->nColumn, hFile->nCurrentColumn - ptToken->nColumn);
-    ptToken->eKind = bIsLabelDefinition ? LEX_TOKEN_KIND_LABEL : LEX_TOKEN_KIND_WORD;
-    hFile->nCurrentColumn += bIsLabelDefinition; // skip ":" of label definition
+    strncpy(ptToken->uValue.szStr,
+            hFile->ptCurrentLine->szLine + ptToken->nColumn,
+            hFile->nCurrentColumn - ptToken->nColumn);
+    ptToken->eKind = bIsLabelDefinition ?
+                     LEX_TOKEN_KIND_LABEL :
+                     LEX_TOKEN_KIND_WORD;
+    /* Skip ":" of label definition */
+    hFile->nCurrentColumn += bIsLabelDefinition;
     return GLOB_SUCCESS;
 }
 
@@ -527,7 +565,6 @@ GLOB_ERROR LEX_ReadNextToken(HLEX_FILE hFile, PLEX_TOKEN * pptToken) {
     /* Allocate a token */
     ptToken = malloc(sizeof(*ptToken));
     if (NULL == ptToken) {
-        // todo error handling
         return GLOB_ERROR_SYS_CALL_ERROR();
     }
     
