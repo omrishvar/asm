@@ -38,6 +38,9 @@ typedef struct LINESTR_LINE {
     /* Row number in the source file.
      * First row gets 1. */
     int nLineNumber;
+    
+    /* References. For internal use of the modules. Don't modify! */
+    int nReferences;
 } LINESTR_LINE, *PLINESTR_LINE, **PPLINESTR_LINE;
 
 /******************************************************************************
@@ -83,6 +86,14 @@ const char * LINESTR_GetFullFileName(HLINESTR_FILE hFile);
  *          If the function fails, an error code is returned.
  *****************************************************************************/
 GLOB_ERROR LINESTR_GetNextLine(HLINESTR_FILE hFile, PPLINESTR_LINE pptLine);
+
+/******************************************************************************
+ * Name:    LINESTR_LineAddRef
+ * Purpose: TODO
+ * Parameters:
+ *          ptLine [IN] - TODO
+ *****************************************************************************/
+void LINESTR_LineAddRef(PLINESTR_LINE ptLine);
 
 /******************************************************************************
  * Name:    LINESTR_FreeLine

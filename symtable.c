@@ -28,46 +28,43 @@ struct SYMTABLE_TABLE {
     PSYMTABLE_RECORD table;
 };
 
-BOOL SYMTABLE_Create(PSYMTABLE_TABLE *createdTable) {
+GLOB_ERROR SYMTABLE_Create(PSYMTABLE_TABLE *createdTable) {
     // allocate table
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
     PSYMTABLE_TABLE  table = NULL;
     table = (PSYMTABLE_TABLE)malloc(sizeof(SYMTABLE_TABLE));
     if (NULL == table) {
-        // error
-        printf("FATAL ERROR: malloc(%lu) failed", sizeof(SYMTABLE_TABLE));
-        return FALSE;
+        return GLOB_ERROR_SYS_CALL_ERROR();
     }
     table->table = (PSYMTABLE_RECORD)malloc(SYMTABLE_DEFAULT_TABLE_SIZE * sizeof(SYMTABLE_RECORD));
     if(NULL == table->table) {
-        printf("FATAL ERROR: malloc(%lu) failed", SYMTABLE_DEFAULT_TABLE_SIZE * sizeof(SYMTABLE_RECORD));
+        eRetValue = GLOB_ERROR_SYS_CALL_ERROR();
         free(table);
-        return FALSE;
+        return eRetValue;
     }
     table->allocatedRecords = SYMTABLE_DEFAULT_TABLE_SIZE;
     table->usedRecords = 0;
     table->isFinalized = FALSE;
     *createdTable = table;
-    return TRUE;
+    return GLOB_SUCCESS;
 }
 
-int symtable_FindSymbol(PSYMTABLE_TABLE table, const char *name, int length) {
+int symtable_FindSymbol(PSYMTABLE_TABLE table, const char *name) {
     for (int i = 0; i < table->usedRecords; i++) {
-        if (strncmp(name, table->table[i].name, length) == 0) {
+        if (strcmp(name, table->table[i].name) == 0) {
             return i;
         }
     }
     return -1;
 }
-BOOL SYMTABLE_Insert(PSYMTABLE_TABLE table, const char *name, int len, SYMTABLE_SYMTYPE type, int address, BOOL isExtern) {
+
+GLOB_ERROR SYMTABLE_Insert(PSYMTABLE_TABLE table, const char *name, SYMTABLE_SYMTYPE type, int address, BOOL isExtern) {
     if (table->isFinalized) {
-        printf("ERROR  CANT INSERT TO FINZALIZED TABLE\n");
-        return FALSE;
+        return GLOB_ERROR_INVALID_STATE;
     }
     // first we need to check the label isn't already exist
-    if (-1 != symtable_FindSymbol(table, name, len)) {
-        // TODO: add error handling
-        printf("label %s already defined", name);
-        return FALSE;
+    if (-1 != symtable_FindSymbol(table, name)) {
+        return GLOB_ERROR_ALREADY_EXIST;
     }
     
     // check for free space
@@ -77,34 +74,29 @@ BOOL SYMTABLE_Insert(PSYMTABLE_TABLE table, const char *name, int len, SYMTABLE_
         // expand table
         newTable = realloc(table->table, newAllocatedRecords * sizeof(SYMTABLE_RECORD));
         if (newTable == NULL) {
-            printf("FATAL ERROR: realloc(%lu) failed", newAllocatedRecords * sizeof(SYMTABLE_RECORD));
-            return FALSE;
+            return GLOB_ERROR_SYS_CALL_ERROR();
         }
         table->table = (PSYMTABLE_RECORD)newTable;
         table->allocatedRecords = newAllocatedRecords;
     }
     
     // insert the new record
-    table->table[table->usedRecords].name = malloc(len + 1);
+    table->table[table->usedRecords].name = malloc(strlen(name) + 1);
     if (table->table[table->usedRecords].name == NULL) {
-        printf("FATAL ERROR: malloc(%lu) failed", strlen(name) + 1);
-        return FALSE;
+        return GLOB_ERROR_SYS_CALL_ERROR();
     }
-    strncpy(table->table[table->usedRecords].name, name, len);
-    table->table[table->usedRecords].name[len] = '\0';
+    strcpy(table->table[table->usedRecords].name, name);
     table->table[table->usedRecords].type = type;
     table->table[table->usedRecords].address = address;
     table->table[table->usedRecords].isExtern = isExtern;
     table->table[table->usedRecords].markedForExport = FALSE;
     table->usedRecords++;
-    return TRUE;
+    return GLOB_SUCCESS;
 }
 
-BOOL SYMTABLE_Finalize(PSYMTABLE_TABLE table, int dataOffset) {
+GLOB_ERROR SYMTABLE_Finalize(PSYMTABLE_TABLE table, int dataOffset) {
     if (table->isFinalized) {
-        // already finalized;
-        printf("ERROR TABLE ALREADY FINALIZED\n");
-        return FALSE;
+        return GLOB_ERROR_INVALID_STATE;
     }
     for (int i = 0; i < table->usedRecords; i++) {
         if (table->table[i].type == SYMTABLE_SYMTYPE_DATA
@@ -113,43 +105,38 @@ BOOL SYMTABLE_Finalize(PSYMTABLE_TABLE table, int dataOffset) {
         }
     }
     table->isFinalized = TRUE;
-    return TRUE;
+    return GLOB_SUCCESS;
 }
 
-BOOL SYMTABLE_MarkForExport(PSYMTABLE_TABLE table, const char *name) {
+GLOB_ERROR SYMTABLE_MarkForExport(PSYMTABLE_TABLE table, const char *name) {
     int i = 0;
     if (!table->isFinalized) {
-        printf("ERROR: SYMTABLE_MarkForExport should be called on finalized table\n");
-        return FALSE;
+        return GLOB_ERROR_INVALID_STATE;
     }
-    i = symtable_FindSymbol(table, name, strlen(name));
+    i = symtable_FindSymbol(table, name);
     if (i == -1) {
-        printf("ERROR: UNRECOGNIZED LABEL %s", name);
-        return FALSE;
+        return GLOB_ERROR_NOT_FOUND;
     }
     if (table->table[i].isExtern) {
-        printf("ERROR: CANNOT EXPORT EXTERN LABEL %s", name);
-        return FALSE;
+        return GLOB_ERROR_EXPORT_AND_EXTERN;
     }
     table->table[i].markedForExport = TRUE;
-    return TRUE;
+    return GLOB_SUCCESS;
 }
 
-BOOL SYMTABLE_GetSymbolInfo(PSYMTABLE_TABLE table, const char *name, int length, SYMTABLE_SYMTYPE *type, int *address, BOOL *isExtern) {
+GLOB_ERROR SYMTABLE_GetSymbolInfo(PSYMTABLE_TABLE table, const char *name, SYMTABLE_SYMTYPE *type, int *address, BOOL *isExtern) {
     int i = 0;
     if (!table->isFinalized) {
-        printf("ERROR: SYMTABLE_MarkForExport should be called on finalized table\n");
-        return FALSE;
+        return GLOB_ERROR_INVALID_STATE;
     }
-    i = symtable_FindSymbol(table, name, length);
+    i = symtable_FindSymbol(table, name);
     if (i == -1) {
-        printf("ERROR: UNRECOGNIZED LABEL %s", name);
-        return FALSE;
+        return GLOB_ERROR_NOT_FOUND;
     }
     *type = table->table[i].type;
     *address = table->table[i].address;
     *isExtern = table->table[i].isExtern;
-    return TRUE;
+    return GLOB_SUCCESS;
 }
 
 void SYMTABLE_Free(PSYMTABLE_TABLE table) {

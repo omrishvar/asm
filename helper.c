@@ -10,7 +10,8 @@
  * 
  * Created on August 3, 2018, 9:17 PM
  */
-
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "helper.h"
 

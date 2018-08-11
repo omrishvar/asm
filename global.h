@@ -19,11 +19,15 @@
 #define FALSE 0
 #define TRUE 1
 
-#define ARRAY_ELEMENTS(arr)        ((sizeof((arr))/sizeof((arr)[0])))
+#define CODE_STARTUP_ADDRESS 100
 #define GLOB_ERROR_SYS_CALL_ERROR()   (GLOB_ERROR_SYS_CALL_FAILED | errno)
 #define TERMINATE_STRING(str)   ((str)[sizeof((str))-1] = '\0')
 
 #define GLOB_FILE_EXTENSION_SOURCE ".as"
+#define GLOB_FILE_EXTENSION_BINARY ".ob"
+#define GLOB_FILE_EXTENSION_ENTRY ".ent"
+#define GLOB_FILE_EXTENSION_EXTERN ".ext"
+
 typedef int BOOL;
 
 typedef enum GLOB_OPCODE {
@@ -61,6 +65,9 @@ typedef enum GLOB_ERROR {
             GLOB_ERROR_PARSING_FAILED,
             GLOB_ERROR_INVALID_PARAMETERS,
             GLOB_ERROR_CONTINUE,
+            GLOB_ERROR_ALREADY_EXIST,
+            GLOB_ERROR_NOT_FOUND,
+            GLOB_ERROR_EXPORT_AND_EXTERN,
             GLOB_ERROR_UNKNOWN,
             
 } GLOB_ERROR;

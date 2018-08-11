@@ -14,6 +14,9 @@
 #ifndef HELPER_H
 #define HELPER_H
 
+#define MAX(a,b)  ((a) > (b) ? (a) : (b))
+#define ARRAY_ELEMENTS(arr)        ((sizeof((arr))/sizeof((arr)[0])))
+
 char * HELPER_ConcatStrings(const char * pszStr1, const char * pszStr2);
 int HELPER_FindInStringsArray(const char ** paszStringsArray, int nArrayElements, const char * pszStr, int nStrLength);
 #endif /* HELPER_H */

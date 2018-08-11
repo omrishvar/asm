@@ -4,13 +4,16 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>LINESTR.h</itemPath>
+      <itemPath>asm.h</itemPath>
       <itemPath>compiler.h</itemPath>
       <itemPath>global.h</itemPath>
       <itemPath>helper.h</itemPath>
       <itemPath>lex.h</itemPath>
       <itemPath>line.h</itemPath>
+      <itemPath>linestr.h</itemPath>
       <itemPath>list.h</itemPath>
+      <itemPath>memstream.h</itemPath>
+      <itemPath>output.h</itemPath>
       <itemPath>parser.h</itemPath>
       <itemPath>symtable.h</itemPath>
     </logicalFolder>
@@ -21,12 +24,15 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <itemPath>asm.c</itemPath>
       <itemPath>compiler.c</itemPath>
       <itemPath>helper.c</itemPath>
       <itemPath>lex.c</itemPath>
       <itemPath>linestr.c</itemPath>
       <itemPath>list.c</itemPath>
       <itemPath>main.c</itemPath>
+      <itemPath>memstream.c</itemPath>
+      <itemPath>output.c</itemPath>
       <itemPath>parser.c</itemPath>
       <itemPath>symtable.c</itemPath>
     </logicalFolder>
@@ -83,10 +89,15 @@
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
           </linkerDynSerch>
         </linkerTool>
       </compileType>
-      <item path="LINESTR.h" ex="false" tool="3" flavor2="0">
+      <item path="asm.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="asm.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="bacon" ex="false" tool="3" flavor2="0">
       </item>
@@ -97,6 +108,9 @@
       <folder path="TestFiles">
         <linkerTool>
           <linkerDynSerch>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
@@ -128,11 +142,21 @@
       </item>
       <item path="linestr.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="linestr.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="list.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="list.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="memstream.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="memstream.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="output.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="output.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="parser.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -181,10 +205,15 @@
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
           </linkerDynSerch>
         </linkerTool>
       </compileType>
-      <item path="LINESTR.h" ex="false" tool="3" flavor2="0">
+      <item path="asm.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="asm.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="bacon" ex="false" tool="3" flavor2="0">
       </item>
@@ -195,6 +224,9 @@
       <folder path="TestFiles">
         <linkerTool>
           <linkerDynSerch>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
@@ -225,11 +257,21 @@
       </item>
       <item path="linestr.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="linestr.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="list.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="list.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="memstream.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="memstream.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="output.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="output.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="parser.c" ex="false" tool="0" flavor2="0">
       </item>

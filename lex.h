@@ -67,6 +67,9 @@ typedef struct LEX_TOKEN {
      * See LEX_TOKEN_KIND declaration for more information. */
     LEX_TOKEN_KIND eKind;
     
+    /* The source line of the token. */
+    PLINESTR_LINE ptLine;
+    
     /* The Column of the token. First column gets 0. */
     int nColumn;
     
@@ -143,11 +146,8 @@ GLOB_ERROR LEX_GetCurrentPosition(HLEX_FILE hFile, PLINESTR_LINE * pptLine,
  * Purpose: Move to the next line in the source file
  * Parameters:
  *          hFile [IN] - handle to the file, previously opened by LEX_Open.
- * Return Value:
- *          Upon successful completion, GLOB_SUCCESS is returned.
- *          If the function fails, an error code is returned.
  *****************************************************************************/
-GLOB_ERROR LEX_MoveToNextLine(HLEX_FILE hFile);
+void LEX_MoveToNextLine(HLEX_FILE hFile);
 
 /******************************************************************************
  * Name:    LEX_FreeTokenLEX_FreeToken

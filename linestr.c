@@ -117,6 +117,9 @@ GLOB_ERROR LINESTR_GetNextLine(HLINESTR_FILE hFile, PLINESTR_LINE * pptLine) {
         return GLOB_ERROR_SYS_CALL_ERROR();
     }
     
+    /* Newly created. have just 1 reference. */
+    ptLine->nReferences = 1;
+    
     /* Set the row number */
     ptLine->nLineNumber = hFile->nLineNumber;
     
@@ -145,11 +148,23 @@ GLOB_ERROR LINESTR_GetNextLine(HLINESTR_FILE hFile, PLINESTR_LINE * pptLine) {
 }
 
 /******************************************************************************
+ * Name:    LINESTR_LineAddRef
+ *****************************************************************************/
+void LINESTR_LineAddRef(PLINESTR_LINE ptLine) {
+    if (NULL != ptLine) {
+        ptLine->nReferences++;
+    }
+}
+
+/******************************************************************************
  * LINESTR_FreeLine
  *****************************************************************************/
 void LINESTR_FreeLine(PLINESTR_LINE ptLine) {
     if (NULL != ptLine) {
-        free(ptLine);
+        ptLine->nReferences--;
+        if (0 == ptLine->nReferences) {
+            free(ptLine);
+        }
     }
 }
 

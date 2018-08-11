@@ -18,7 +18,7 @@
 #include "global.h"
 #include "compiler.h"
 
-
+#if 0
 /* Function to convert a decinal number to binary number */
 void decimalToBinary(int n) {
     char x[15] = { 0 };
@@ -226,3 +226,5 @@ void compiler_compile(struct token_list ** pTokenListArray, int usedRows){
     compiler_compileSecondPhase(pTokenListArray, usedRows, symTable);
  
 }    
+#endif
+int x;

@@ -59,3 +59,4 @@ void * LIST_CreateElementAsFirst(HLIST hList, size_t cbElementSize) {
 }
     
 #endif
+int x;

@@ -343,13 +343,13 @@ GLOB_ERROR lex_ParseString(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
     }
     
     /* Allocate space for the value of the token */
-    ptToken->uValue.szStr = malloc(hFile->nCurrentColumn - ptToken->nColumn -1);
+    ptToken->uValue.szStr = malloc(hFile->nCurrentColumn - ptToken->nColumn );
     if (NULL == ptToken->uValue.szStr) {
         return GLOB_ERROR_SYS_CALL_ERROR();
     }
     strncpy(ptToken->uValue.szStr,
         hFile->ptCurrentLine->szLine + ptToken-> nColumn + 1,
-        hFile->nCurrentColumn - ptToken->nColumn - 2);
+        hFile->nCurrentColumn - ptToken->nColumn - 1);
     /* Skip the closing '"' */
     hFile->nCurrentColumn++;
     
@@ -449,48 +449,6 @@ static GLOB_ERROR lex_ParseAlpha(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
 }
 
 /******************************************************************************
- * EXTERNAL FUNCTIONS
- * ------------------
- * See function-level documentation in the header file
- *****************************************************************************/
-
-/******************************************************************************
- * LEX_Open
- *****************************************************************************/
-GLOB_ERROR LEX_Open(const char * szFileName, PHLEX_FILE phFile){
-    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
-    HLEX_FILE hFile = NULL;
-    
-    /* Check parameters */
-    if (NULL == szFileName || NULL == phFile) {
-        return GLOB_ERROR_INVALID_PARAMETERS;
-    }
-    
-    /* Allocate the handle */
-    hFile = malloc(sizeof(*hFile));
-    if (NULL == hFile) {
-        return GLOB_ERROR_SYS_CALL_ERROR();
-    }
-    
-    /* Init fields */
-    hFile->ptCurrentLine = NULL;
-    hFile->nCurrentColumn = 0;
-    hFile->nCurrentLineLength = 0;
-    hFile->hSourceFile = NULL;
-    
-    /* Open the source file */
-    eRetValue = LINESTR_Open(szFileName, &hFile->hSourceFile);
-    if(eRetValue) {
-        free(hFile);
-        return eRetValue;
-    }
-    
-    /* Set out parameter upon success */
-    *phFile = hFile;
-    return GLOB_SUCCESS;
-}
-
-/******************************************************************************
  * Name:    lex_MoveToNextToken
  * Purpose: The function moves the parser position to the next token to parse
  * Parameters:
@@ -543,6 +501,48 @@ static GLOB_ERROR lex_MoveToNextToken(HLEX_FILE hFile,
 }
 
 /******************************************************************************
+ * EXTERNAL FUNCTIONS
+ * ------------------
+ * See function-level documentation in the header file
+ *****************************************************************************/
+
+/******************************************************************************
+ * LEX_Open
+ *****************************************************************************/
+GLOB_ERROR LEX_Open(const char * szFileName, PHLEX_FILE phFile){
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+    HLEX_FILE hFile = NULL;
+    
+    /* Check parameters */
+    if (NULL == szFileName || NULL == phFile) {
+        return GLOB_ERROR_INVALID_PARAMETERS;
+    }
+    
+    /* Allocate the handle */
+    hFile = malloc(sizeof(*hFile));
+    if (NULL == hFile) {
+        return GLOB_ERROR_SYS_CALL_ERROR();
+    }
+    
+    /* Init fields */
+    hFile->ptCurrentLine = NULL;
+    hFile->nCurrentColumn = 0;
+    hFile->nCurrentLineLength = 0;
+    hFile->hSourceFile = NULL;
+    
+    /* Open the source file */
+    eRetValue = LINESTR_Open(szFileName, &hFile->hSourceFile);
+    if(eRetValue) {
+        free(hFile);
+        return eRetValue;
+    }
+    
+    /* Set out parameter upon success */
+    *phFile = hFile;
+    return GLOB_SUCCESS;
+}
+
+/******************************************************************************
  * LEX_ReadNextToken
  *****************************************************************************/
 GLOB_ERROR LEX_ReadNextToken(HLEX_FILE hFile, PLEX_TOKEN * pptToken) {
@@ -591,11 +591,16 @@ GLOB_ERROR LEX_ReadNextToken(HLEX_FILE hFile, PLEX_TOKEN * pptToken) {
         return eRetValue;
     }
     
+    /* Set the line of the token */
+    ptToken->ptLine = hFile->ptCurrentLine;
+    LINESTR_LineAddRef(ptToken->ptLine);
+    
     /* Set out parameters */
     *pptToken = ptToken;
     return GLOB_SUCCESS;
 }
 
+// TODO REMOVE FUNCTION
 /******************************************************************************
  * LEX_GetCurrentPosition
  *****************************************************************************/
@@ -615,16 +620,15 @@ GLOB_ERROR LEX_GetCurrentPosition(HLEX_FILE hFile, PLINESTR_LINE * pptLine,
 /******************************************************************************
  * LEX_MoveToNextLine
  *****************************************************************************/
-GLOB_ERROR LEX_MoveToNextLine(HLEX_FILE hFile){
+void LEX_MoveToNextLine(HLEX_FILE hFile){
     /* Check parameters */
     if (NULL == hFile) {
-        return GLOB_ERROR_INVALID_PARAMETERS;
+        return;
     }
     if (NULL != hFile->ptCurrentLine) {
         LINESTR_FreeLine(hFile->ptCurrentLine);
         hFile->ptCurrentLine = NULL;
     }
-    return GLOB_SUCCESS;
 }
 
 /******************************************************************************
@@ -641,6 +645,8 @@ void LEX_FreeToken(PLEX_TOKEN ptToken){
             || LEX_TOKEN_KIND_WORD == ptToken->eKind) {
         free(ptToken->uValue.szStr);
     }
+    
+    LINESTR_FreeLine(ptToken->ptLine);
     
     /* Free the token itself */
     free(ptToken);
