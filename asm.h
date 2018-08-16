@@ -25,6 +25,8 @@ typedef struct ASM_FILE ASM_FILE, *HASM_FILE, **PHASM_FILE;
 GLOB_ERROR ASM_Compile(const char * szFileName, PHASM_FILE phFile);
 
 GLOB_ERROR ASM_WriteBinary(HASM_FILE hFile, PHMEMSTREAM phStream, int * nCode, int * nData);
+GLOB_ERROR ASM_GetExternals(HASM_FILE hFile, char ** ppszExternals, int * nLength);
+GLOB_ERROR ASM_GetEntries(HASM_FILE hFile, char ** ppszExternals, int * nLength);
 
 void ASM_Close(HASM_FILE hFile);
 

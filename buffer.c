@@ -1,5 +1,5 @@
 /******************************************************************************
- * File:    memstream.c
+ * File:    buffer.c
  * Author:  Doron Shvartztuch
  * The MEMSTREAM module provides memory stream functionality.
  * 
@@ -16,29 +16,29 @@
 #include <stdlib.h>
 #include <string.h>
 #include "helper.h"
-#include "memstream.h"
+#include "buffer.h"
 
 /******************************************************************************
  * CONSTANTS & MACROS
  *****************************************************************************/
 
-/* The default size(in int) of a stream */
-#define MEMSTREAM_DEFAULT_SIZE 4
-#define MEMSTREAM_EXPAND_FACTOR 2
+/* The default size of a stream */
+#define BUFFER_DEFAULT_SIZE 4
+#define BUFFER_EXPAND_FACTOR 2
 
 /******************************************************************************
  * TYPEDEFS
  *****************************************************************************/
 
-struct MEMSTREAM {
-    int * pnStream;
+struct BUFFER {
+    char * pnStream;
     int nAllocated;
     int nUsed;
 };
 
-static GLOB_ERROR memstream_EnsureSpace(HMEMSTREAM hStream, int nSpace) {
+static GLOB_ERROR memstream_EnsureSpace(HBUFFER hStream, int nSpace) {
     int nNeedToAllocate = 0;
-    int * pnNewStream = NULL;
+    char * pnNewStream = NULL;
     
     /* Calc the size we need */
     nNeedToAllocate = nSpace - hStream->nAllocated + hStream->nUsed;
@@ -48,8 +48,8 @@ static GLOB_ERROR memstream_EnsureSpace(HMEMSTREAM hStream, int nSpace) {
     }
     
     nNeedToAllocate = MAX(nNeedToAllocate,
-                        hStream->nAllocated * (MEMSTREAM_EXPAND_FACTOR-1));
-    pnNewStream = realloc(hStream->pnStream, (hStream->nAllocated + nNeedToAllocate) * sizeof(int));
+                        hStream->nAllocated * (BUFFER_EXPAND_FACTOR-1));
+    pnNewStream = realloc(hStream->pnStream, hStream->nAllocated + nNeedToAllocate);
     if (NULL == pnNewStream) {
         return GLOB_ERROR_SYS_CALL_ERROR();
     }
@@ -64,10 +64,10 @@ static GLOB_ERROR memstream_EnsureSpace(HMEMSTREAM hStream, int nSpace) {
  *****************************************************************************/
 
 /******************************************************************************
- * Name:    MEMSTREAM_Create
+ * Name:    BUFFER_Create
  *****************************************************************************/
-GLOB_ERROR MEMSTREAM_Create(PHMEMSTREAM phStream) {
-    HMEMSTREAM hStream = NULL;
+GLOB_ERROR BUFFER_Create(PHBUFFER phStream) {
+    HBUFFER hStream = NULL;
     GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
     
     /* Check parameters. */
@@ -80,7 +80,7 @@ GLOB_ERROR MEMSTREAM_Create(PHMEMSTREAM phStream) {
     if (NULL == hStream) {
         return GLOB_ERROR_SYS_CALL_ERROR();
     }
-    hStream->nAllocated = MEMSTREAM_DEFAULT_SIZE;
+    hStream->nAllocated = BUFFER_DEFAULT_SIZE;
     hStream->nUsed = 0;
     
     /* Allocate the default stream */
@@ -97,81 +97,44 @@ GLOB_ERROR MEMSTREAM_Create(PHMEMSTREAM phStream) {
 }
 
 /******************************************************************************
- * Name:    MEMSTREAM_AppendString
+ * Name:    BUFFER_AppendString
  *****************************************************************************/
-GLOB_ERROR MEMSTREAM_AppendString(HMEMSTREAM hStream, const char * pszStr) {
-    int nIndex = 0;
+GLOB_ERROR BUFFER_AppendString(HBUFFER hStream, const char * pszStr) {
+    int nLength = 0;
     GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
     if (NULL == hStream || NULL == pszStr) {
         return GLOB_ERROR_INVALID_PARAMETERS;
     }
     
-    /* Note the '<='. we include the null terminator */
-    for (nIndex = 0; nIndex <= strlen(pszStr) ; nIndex++) {
-        int nCurrentCharAsNumber = 0;
-        nCurrentCharAsNumber = pszStr[nIndex];
-        eRetValue = MEMSTREAM_AppendNumber(hStream, nCurrentCharAsNumber);
-        if (eRetValue) {
-            return eRetValue;
-        }
-    }
-    return GLOB_SUCCESS;
-}
-
-/******************************************************************************
- * Name:    MEMSTREAM_AppendNumber
- *****************************************************************************/
-GLOB_ERROR MEMSTREAM_AppendNumber(HMEMSTREAM hStream, int nNumber) {
-    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
-    if (NULL == hStream) {
-        return GLOB_ERROR_INVALID_PARAMETERS;
-    }
-    eRetValue = memstream_EnsureSpace(hStream, 1);
+    nLength = strlen(pszStr);
+    eRetValue = memstream_EnsureSpace(hStream, nLength);
     if (eRetValue) {
         return eRetValue;
     }
-    hStream->pnStream[hStream->nUsed] = nNumber;
-    hStream->nUsed++;
+    
+    memcpy(hStream->pnStream+hStream->nUsed, pszStr, nLength);
+    hStream->nUsed += nLength;
     return GLOB_SUCCESS;
 }
 
 /******************************************************************************
- * Name:    MEMSTREAM_AppendPrintf
+ * Name:    BUFFER_AppendPrintf
  *****************************************************************************/
-GLOB_ERROR MEMSTREAM_AppendPrintf(HMEMSTREAM hStream, const char * pszFormat, ...) {        
+GLOB_ERROR BUFFER_AppendPrintf(HBUFFER hStream, const char * pszFormat, ...) {        
     char szFormatted[80];
     va_list vaArgs;
     va_start (vaArgs, pszFormat);
     vsnprintf (szFormatted, sizeof(szFormatted), pszFormat, vaArgs);
     va_end (vaArgs);
     
-    return MEMSTREAM_AppendString(hStream, szFormatted);
+    return BUFFER_AppendString(hStream, szFormatted);
 }
     
 /******************************************************************************
- * Name:    MEMSTREAM_Concat
+ * Name:    BUFFER_GetStream
  *****************************************************************************/
-GLOB_ERROR MEMSTREAM_Concat(HMEMSTREAM hStream1, HMEMSTREAM hStream2) {
-    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
-    if (NULL == hStream1 || NULL == hStream2) {
-        return GLOB_ERROR_INVALID_PARAMETERS;
-    }
-    eRetValue = memstream_EnsureSpace(hStream1, hStream2->nUsed);
-    if (eRetValue) {
-        return eRetValue;
-    }
-    memcpy(hStream1->pnStream + hStream1->nUsed,
-           hStream2->pnStream,
-           hStream2->nUsed * sizeof(int));
-    hStream1->nUsed += hStream2->nUsed;
-    return GLOB_SUCCESS;
-}
-
-/******************************************************************************
- * Name:    MEMSTREAM_GetStream
- *****************************************************************************/
-GLOB_ERROR MEMSTREAM_GetStream(HMEMSTREAM hStream,
-                               int ** ppnStream, int * pnStreamLength) {
+GLOB_ERROR BUFFER_GetStream(HBUFFER hStream,
+                               char ** ppnStream, int * pnStreamLength) {
     if (NULL == hStream) {
         return GLOB_ERROR_INVALID_PARAMETERS;
     }
@@ -181,9 +144,9 @@ GLOB_ERROR MEMSTREAM_GetStream(HMEMSTREAM hStream,
 }
 
 /******************************************************************************
- * Name:    MEMSTREAM_Free 
+ * Name:    BUFFER_Free 
  *****************************************************************************/
-void MEMSTREAM_Free(HMEMSTREAM hStream) {
+void BUFFER_Free(HBUFFER hStream) {
     if (NULL != hStream) {
         free(hStream->pnStream);
         free(hStream);

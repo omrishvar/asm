@@ -58,15 +58,7 @@ int symtable_FindSymbol(PSYMTABLE_TABLE table, const char *name) {
     return -1;
 }
 
-GLOB_ERROR SYMTABLE_Insert(PSYMTABLE_TABLE table, const char *name, SYMTABLE_SYMTYPE type, int address, BOOL isExtern) {
-    if (table->isFinalized) {
-        return GLOB_ERROR_INVALID_STATE;
-    }
-    // first we need to check the label isn't already exist
-    if (-1 != symtable_FindSymbol(table, name)) {
-        return GLOB_ERROR_ALREADY_EXIST;
-    }
-    
+GLOB_ERROR symtable_InsertRecord(PSYMTABLE_TABLE table, const char *name, SYMTABLE_SYMTYPE type, int address, BOOL isExtern, BOOL markedForExport) {
     // check for free space
     if (table->usedRecords == table->allocatedRecords) {
         void *newTable = NULL;
@@ -89,9 +81,30 @@ GLOB_ERROR SYMTABLE_Insert(PSYMTABLE_TABLE table, const char *name, SYMTABLE_SYM
     table->table[table->usedRecords].type = type;
     table->table[table->usedRecords].address = address;
     table->table[table->usedRecords].isExtern = isExtern;
-    table->table[table->usedRecords].markedForExport = FALSE;
+    table->table[table->usedRecords].markedForExport = markedForExport;
     table->usedRecords++;
     return GLOB_SUCCESS;
+}
+GLOB_ERROR SYMTABLE_Insert(PSYMTABLE_TABLE table, const char *name, SYMTABLE_SYMTYPE type, int address, BOOL isExtern) {
+    int nIndex = 0;
+    if (table->isFinalized) {
+        return GLOB_ERROR_INVALID_STATE;
+    }
+    
+    nIndex = symtable_FindSymbol(table, name);
+    // first we need to check the label isn't already exist
+    if (-1 != nIndex &&
+            (table->table[nIndex].isExtern || 0 != table->table[nIndex].address)) {
+        return GLOB_ERROR_ALREADY_EXIST;
+    }
+    
+    if (-1 != nIndex) {
+        // Already defined for export. update the record
+        table->table[nIndex].type = type;
+        table->table[nIndex].address = address;
+        return GLOB_SUCCESS;
+    }
+    return symtable_InsertRecord(table, name, type, address, isExtern, FALSE);
 }
 
 GLOB_ERROR SYMTABLE_Finalize(PSYMTABLE_TABLE table, int dataOffset) {
@@ -105,17 +118,17 @@ GLOB_ERROR SYMTABLE_Finalize(PSYMTABLE_TABLE table, int dataOffset) {
         }
     }
     table->isFinalized = TRUE;
-    return GLOB_SUCCESS;
+    return GLOB_SUCCESS;    
 }
 
 GLOB_ERROR SYMTABLE_MarkForExport(PSYMTABLE_TABLE table, const char *name) {
     int i = 0;
-    if (!table->isFinalized) {
+    if (table->isFinalized) {
         return GLOB_ERROR_INVALID_STATE;
     }
     i = symtable_FindSymbol(table, name);
     if (i == -1) {
-        return GLOB_ERROR_NOT_FOUND;
+        return symtable_InsertRecord(table, name, SYMTABLE_SYMTYPE_CODE, 0, FALSE, TRUE);
     }
     if (table->table[i].isExtern) {
         return GLOB_ERROR_EXPORT_AND_EXTERN;
@@ -124,7 +137,7 @@ GLOB_ERROR SYMTABLE_MarkForExport(PSYMTABLE_TABLE table, const char *name) {
     return GLOB_SUCCESS;
 }
 
-GLOB_ERROR SYMTABLE_GetSymbolInfo(PSYMTABLE_TABLE table, const char *name, SYMTABLE_SYMTYPE *type, int *address, BOOL *isExtern) {
+GLOB_ERROR SYMTABLE_GetSymbolInfo(PSYMTABLE_TABLE table, const char *name, int *address, BOOL *isExtern) {
     int i = 0;
     if (!table->isFinalized) {
         return GLOB_ERROR_INVALID_STATE;
@@ -133,9 +146,25 @@ GLOB_ERROR SYMTABLE_GetSymbolInfo(PSYMTABLE_TABLE table, const char *name, SYMTA
     if (i == -1) {
         return GLOB_ERROR_NOT_FOUND;
     }
-    *type = table->table[i].type;
     *address = table->table[i].address;
     *isExtern = table->table[i].isExtern;
+    return GLOB_SUCCESS;
+}
+
+GLOB_ERROR SYMTABLE_ForEachExport(PSYMTABLE_TABLE table, SYMTABLE_FOREACH_CALLBACK callback, void * context) {
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+    if (!table->isFinalized) {
+        return GLOB_ERROR_INVALID_STATE;
+    }
+    
+    for (int i = 0; i < table->usedRecords; i++) {
+        if (table->table[i].markedForExport) {
+            eRetValue = callback(table->table[i].name, table->table[i].address, context);
+            if (eRetValue) {
+                return eRetValue;
+            }
+        }
+    }
     return GLOB_SUCCESS;
 }
 

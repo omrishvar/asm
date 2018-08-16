@@ -11,31 +11,36 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
 
 #include "global.h"
-#include "parser.h"
-#include "symtable.h"
-#include "compiler.h"
 
-#include "LINESTR.h"
-#include "LEX.h"
 #include "asm.h"
 #include "output.h"
-int main() {
+
+#define MIN_NUMBER_OF_ARGUMENTS 2
+
+int main(int argc, char * argv[]) {
     HASM_FILE hAsm = NULL;
-    GLOB_ERROR eRetValue;
-    HMEMSTREAM hStream;
-    int nCode;
-    int nData;
-    eRetValue = ASM_Compile("sample", &hAsm);
-    if (eRetValue) {
-        return eRetValue;
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+    
+    if (argc < MIN_NUMBER_OF_ARGUMENTS) {
+        printf("USAGE: %s <file1> <file2> ...\n", argv[0]);
+        return 1;
     }
-    OUTPUT_WriteFiles("sample", hAsm);
-    ASM_Close(hAsm);
+    for (int nIndex = 1; nIndex < argc; nIndex++) {
+        eRetValue = ASM_Compile(argv[nIndex], &hAsm);
+        if (GLOB_ERROR_PARSING_FAILED == eRetValue) {
+            continue;
+        }
+        if (eRetValue) {
+            return eRetValue;
+        }
+        eRetValue = OUTPUT_WriteFiles(argv[nIndex], hAsm);
+        if (eRetValue) {
+            ASM_Close(hAsm);
+            return eRetValue;
+        }
+        ASM_Close(hAsm);
+    }
 }
 

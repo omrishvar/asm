@@ -36,7 +36,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/asm.o \
-	${OBJECTDIR}/compiler.o \
+	${OBJECTDIR}/buffer.o \
 	${OBJECTDIR}/helper.o \
 	${OBJECTDIR}/lex.o \
 	${OBJECTDIR}/linestr.o \
@@ -44,7 +44,6 @@ OBJECTFILES= \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/memstream.o \
 	${OBJECTDIR}/output.o \
-	${OBJECTDIR}/parser.o \
 	${OBJECTDIR}/symtable.o
 
 
@@ -77,10 +76,10 @@ ${OBJECTDIR}/asm.o: asm.c
 	${RM} "$@.d"
 	$(COMPILE.c) -O2 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/asm.o asm.c
 
-${OBJECTDIR}/compiler.o: compiler.c
+${OBJECTDIR}/buffer.o: buffer.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/compiler.o compiler.c
+	$(COMPILE.c) -O2 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/buffer.o buffer.c
 
 ${OBJECTDIR}/helper.o: helper.c
 	${MKDIR} -p ${OBJECTDIR}
@@ -116,11 +115,6 @@ ${OBJECTDIR}/output.o: output.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -O2 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/output.o output.c
-
-${OBJECTDIR}/parser.o: parser.c
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.c) -O2 -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/parser.o parser.c
 
 ${OBJECTDIR}/symtable.o: symtable.c
 	${MKDIR} -p ${OBJECTDIR}

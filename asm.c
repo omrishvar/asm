@@ -20,6 +20,7 @@
 #include "lex.h"
 #include "linestr.h"
 #include "symtable.h"
+#include "buffer.h"
 #include "memstream.h"
 #include "asm.h"
 
@@ -35,8 +36,11 @@
 #define ASM_IS_REGISTER_OPERAND_ALLOWED(operand) ((operand) & 0x8)
 
 
+
 #define ASM_COMBINE_FIRST_WORD(eParam1, eParam2, eOpcode, eSource, eDest) \
     ((eParam1)<<12 | (eParam2)<<10 | (eOpcode)<<6 | (eSource)<<4 | (eDest)<<2 | (ASM_OPERAND_METHOD_IMMEDIATE))
+
+#define ASM_COMBINE_REGISTER_VALUE(nSource, nDest) (((nSource) << 6) | (nDest))
 
 typedef enum ASM_OPERAND_METHOD {
     ASM_OPERAND_METHOD_IMMEDIATE = 0,
@@ -55,6 +59,7 @@ typedef struct ASM_LINE {
     HMEMSTREAM hStream;
     PLEX_TOKEN aptOperands[ASM_MAX_OPERANDS];
     int nOperandsLength;
+    int nCounter;
     int nLength;
     BOOL bIsData;
     ASM_OPERAND_METHOD eParam1;
@@ -70,13 +75,18 @@ struct ASM_FILE {
     HLEX_FILE hLex;
     
     PSYMTABLE_TABLE hSymTable;
-    
+    HBUFFER hExternalsStream;
+    HBUFFER hEntriesStream;
+   
     int nCodeCounter;
     int nDataCounter;
     BOOL bHasErrors;
-    
+    BOOL bHaveExternals;
+    BOOL bHaveEntries;
     PASM_LINE ptFirstLine;
     PASM_LINE ptLastLine;
+    
+    
 };
 
 int g_znAllowedOperands[] = 
@@ -178,12 +188,89 @@ static GLOB_ERROR asm_FirstPhaseCompileData(HASM_FILE hFile, PASM_LINE ptLine) {
 }
 
 static GLOB_ERROR asm_FirstPhaseCompileExtern(HASM_FILE hFile, PASM_LINE ptLine) {
-    return GLOB_ERROR_UNKNOWN;
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+    PLEX_TOKEN ptToken = NULL;
+
+    while (GLOB_ERROR_END_OF_LINE != eRetValue) {
+        eRetValue = LEX_ReadNextToken(hFile->hLex, &ptToken);
+        if (GLOB_SUCCESS != eRetValue && GLOB_ERROR_END_OF_LINE != eRetValue) {
+            return eRetValue;
+        }
+
+        if (GLOB_ERROR_END_OF_LINE == eRetValue || ptToken->eKind != LEX_TOKEN_KIND_WORD) {
+            asm_ReportError(hFile, TRUE, "identifier is expected");
+            if (GLOB_SUCCESS == eRetValue) {
+                LEX_FreeToken(ptToken);
+            }
+            return GLOB_ERROR_PARSING_FAILED;
+        }
+        
+        eRetValue = SYMTABLE_Insert(hFile->hSymTable, ptToken->uValue.szStr, SYMTABLE_SYMTYPE_CODE, 0, TRUE);
+        if (GLOB_ERROR_ALREADY_EXIST == eRetValue) {
+            asm_ReportError(hFile, TRUE, "label already exist");
+            LEX_FreeToken(ptToken);
+   
+            return GLOB_ERROR_PARSING_FAILED;
+        }
+        LEX_FreeToken(ptToken);
+
+        if (eRetValue) {
+            return eRetValue;
+        }
+        /* Check if we have comma (more labels)*/
+        eRetValue = LEX_ReadNextToken(hFile->hLex, &ptToken);
+        if (GLOB_SUCCESS != eRetValue && GLOB_ERROR_END_OF_LINE != eRetValue) {
+            return eRetValue;
+        }
+        if (GLOB_SUCCESS == eRetValue) {
+            LEX_FreeToken(ptToken);
+        }
+    }
+    hFile->bHaveExternals = TRUE;
+    return GLOB_SUCCESS;
 }
 
 
 static GLOB_ERROR asm_FirstPhaseCompileEntry(HASM_FILE hFile, PASM_LINE ptLine) {
-    return GLOB_ERROR_UNKNOWN;
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+    PLEX_TOKEN ptToken = NULL;
+
+    while (GLOB_ERROR_END_OF_LINE != eRetValue) {
+        eRetValue = LEX_ReadNextToken(hFile->hLex, &ptToken);
+        if (GLOB_SUCCESS != eRetValue && GLOB_ERROR_END_OF_LINE != eRetValue) {
+            return eRetValue;
+        }
+
+        if (GLOB_ERROR_END_OF_LINE == eRetValue || ptToken->eKind != LEX_TOKEN_KIND_WORD) {
+            asm_ReportError(hFile, TRUE, "identifier is expected");
+            if (GLOB_SUCCESS == eRetValue) {
+                LEX_FreeToken(ptToken);
+            }
+            return GLOB_ERROR_PARSING_FAILED;
+        }
+        
+        eRetValue = SYMTABLE_MarkForExport(hFile->hSymTable, ptToken->uValue.szStr);
+        if (GLOB_ERROR_EXPORT_AND_EXTERN == eRetValue) {
+            asm_ReportError(hFile, TRUE, "label already defined as extern");
+            LEX_FreeToken(ptToken);
+            return GLOB_ERROR_PARSING_FAILED;
+        }
+        LEX_FreeToken(ptToken);
+
+        if (eRetValue) {
+            return eRetValue;
+        }
+        /* Check if we have comma (more labels)*/
+        eRetValue = LEX_ReadNextToken(hFile->hLex, &ptToken);
+        if (GLOB_SUCCESS != eRetValue && GLOB_ERROR_END_OF_LINE != eRetValue) {
+            return eRetValue;
+        }
+        if (GLOB_SUCCESS == eRetValue) {
+            LEX_FreeToken(ptToken);
+        }
+    }
+    hFile->bHaveEntries = TRUE;
+    return GLOB_SUCCESS;
 }
 
 static GLOB_ERROR asm_FirstPhaseReadOperand(HASM_FILE hFile, ASM_OPERAND_METHOD * peMethod, int nAllowedOperandType, PASM_LINE ptLine);
@@ -266,17 +353,7 @@ static GLOB_ERROR asm_FirstPhaseReadOperand(HASM_FILE hFile, ASM_OPERAND_METHOD 
     } else if (ASM_IS_DIRECT_OPERAND_ALLOWED(nAllowedOperandType) && LEX_TOKEN_KIND_WORD == ptToken->eKind) {
         // direct (including parameter)
         eMethod = ASM_OPERAND_METHOD_DIRECT; // TODO parameter
-        if (ASM_IS_PARAMETER_OPERAND_ALLOWED(nAllowedOperandType)) {
-            // we are at the destination operand
-            // try to read the next token
-            eRetValue = asm_FirstPhaseReadParameterOperand(hFile, ptLine);
-            if (GLOB_SUCCESS != eRetValue && GLOB_ERROR_END_OF_LINE != eRetValue) {
-                return eRetValue;
-            }
-            if (GLOB_SUCCESS == eRetValue) {
-                eMethod = ASM_OPERAND_METHOD_PARAMETERS;
-            }
-        }
+        
     } else if (ASM_IS_REGISTER_OPERAND_ALLOWED(nAllowedOperandType) && LEX_TOKEN_KIND_REGISTER == ptToken->eKind) {
         eMethod = ASM_OPERAND_METHOD_REGISTER;
     } else {
@@ -284,10 +361,23 @@ static GLOB_ERROR asm_FirstPhaseReadOperand(HASM_FILE hFile, ASM_OPERAND_METHOD 
         LEX_FreeToken(ptToken);
         return GLOB_ERROR_PARSING_FAILED;
     }
-    *peMethod = eMethod;
+    
     
     ptLine->aptOperands[ptLine->nOperandsLength] = ptToken;
     ptLine->nOperandsLength++;
+    if (ASM_OPERAND_METHOD_DIRECT == eMethod && ASM_IS_PARAMETER_OPERAND_ALLOWED(nAllowedOperandType)) {
+        // we are at the destination operand
+        // try to read the next token
+        eRetValue = asm_FirstPhaseReadParameterOperand(hFile, ptLine);
+        if (GLOB_SUCCESS != eRetValue && GLOB_ERROR_END_OF_LINE != eRetValue) {
+            return eRetValue;
+        }
+        if (GLOB_SUCCESS == eRetValue) {
+            eMethod = ASM_OPERAND_METHOD_PARAMETERS;
+        }
+    }
+    
+    *peMethod = eMethod;
     return GLOB_SUCCESS;
 }
 static GLOB_ERROR asm_FirstPhaseCompileSourceOperand(HASM_FILE hFile, GLOB_OPCODE eOpcode, PASM_LINE ptLine) {
@@ -364,7 +454,15 @@ static GLOB_ERROR asm_FirstPhaseCompileOpcode(HASM_FILE hFile, GLOB_OPCODE eOpco
         return eRetValue;
     }
     
-    ptLine->nLength = 1;
+    /* Calculate the length */
+    /* Basically the length is the leading word + 1 word for each operand.
+     * In case there are two register operands they will share the same word. */
+    ptLine->nLength = 1 + ptLine->nOperandsLength;
+    if (ptLine->nOperandsLength >= 2
+            && LEX_TOKEN_KIND_REGISTER == ptLine->aptOperands[ptLine->nOperandsLength-1]->eKind
+            && LEX_TOKEN_KIND_REGISTER == ptLine->aptOperands[ptLine->nOperandsLength-2]->eKind) {
+        ptLine->nLength--;
+    }
     ptLine->bIsData = FALSE;
     return GLOB_SUCCESS;
 }
@@ -502,7 +600,6 @@ static GLOB_ERROR asm_FirstPhaseCompileNonEmptyLine(HASM_FILE hFile, PLEX_TOKEN 
     eRetValue = asm_FirstPhaseCompileLineContent(hFile, ptToken, ptLine);
     if (eRetValue) {
         MEMSTREAM_Free(ptLine->hStream);
-        LEX_FreeToken(ptToken);
         free(ptLine);
         return eRetValue;
     }
@@ -517,8 +614,10 @@ static GLOB_ERROR asm_FirstPhaseCompileNonEmptyLine(HASM_FILE hFile, PLEX_TOKEN 
 
     /* Update the data/code counter */
     if (ptLine->bIsData) {
+        ptLine->nCounter = hFile->nDataCounter;
         hFile->nDataCounter += ptLine->nLength;
     } else {
+        ptLine->nCounter = hFile->nCodeCounter;
         hFile->nCodeCounter += ptLine->nLength;
     }
     
@@ -562,6 +661,95 @@ static GLOB_ERROR asm_FirstPhase(HASM_FILE hFile) {
     return GLOB_ERROR_END_OF_FILE == eRetValue ? GLOB_SUCCESS : eRetValue;
 }
 
+static GLOB_ERROR asm_SecondPhaseCompileLine(HASM_FILE hFile, PASM_LINE ptLine) {
+    int nOperand = 0;
+    ASM_ARE eAre;
+    int nLabelAddress = 0;
+    BOOL bIsExtern = FALSE;
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+    
+    for (int nIndex = 0; nIndex < ptLine->nOperandsLength; nIndex++) {
+        switch (ptLine->aptOperands[nIndex]->eKind) {
+            case LEX_TOKEN_KIND_IMMED_NUMBER:
+                // write the number
+                nOperand = ptLine->aptOperands[nIndex]->uValue.nNumber;
+                eAre = ASM_ARE_ABSOLUTE;
+                break;
+            case LEX_TOKEN_KIND_WORD:
+                eRetValue = SYMTABLE_GetSymbolInfo(hFile->hSymTable,
+                        ptLine->aptOperands[nIndex]->uValue.szStr,
+                        &nLabelAddress, &bIsExtern);
+                if (GLOB_ERROR_NOT_FOUND == eRetValue) {
+                    asm_ReportError(hFile, TRUE, "Missing label");
+                    return GLOB_SUCCESS;
+                }
+                if (bIsExtern) {
+                    nOperand = 0;
+                    eAre = ASM_ARE_EXTERNAL;
+                    /* Add to the externals file */
+                    eRetValue = BUFFER_AppendPrintf(hFile->hExternalsStream, "%s\t%d\n",
+                            ptLine->aptOperands[nIndex]->uValue.szStr,
+                            ptLine->nCounter + 1 + nIndex);
+                    if (eRetValue) {
+                        return eRetValue;
+                    }
+                }
+                else {
+                    nOperand = nLabelAddress;
+                    eAre = ASM_ARE_RELOCATABLE;
+                }
+                break;
+            case LEX_TOKEN_KIND_REGISTER:
+                /* If the next operand is also a register, combine them */
+                if (nIndex+1 < ptLine->nOperandsLength
+                        && LEX_TOKEN_KIND_REGISTER == ptLine->aptOperands[nIndex+1]->eKind) {
+                    nOperand = ASM_COMBINE_REGISTER_VALUE(ptLine->aptOperands[nIndex]->uValue.nNumber,
+                                                          ptLine->aptOperands[nIndex+1]->uValue.nNumber);
+                    nIndex++;
+                } else if (nIndex+1 < ptLine->nOperandsLength) {
+                    /* Source operand */
+                    nOperand = ASM_COMBINE_REGISTER_VALUE(ptLine->aptOperands[nIndex]->uValue.nNumber, 0);
+                } else {
+                    /* Dest operand*/
+                    nOperand = ASM_COMBINE_REGISTER_VALUE(0, ptLine->aptOperands[nIndex]->uValue.nNumber);
+                }
+                eAre = ASM_ARE_ABSOLUTE;
+                break;
+            default:
+                return GLOB_ERROR_UNKNOWN;
+        }
+        eRetValue = MEMSTREAM_AppendNumber(ptLine->hStream, nOperand << 2 | eAre);
+        if (eRetValue) {
+            return eRetValue;
+        }
+    }
+    return GLOB_SUCCESS;
+}
+ 
+static GLOB_ERROR asm_SecondPhase(HASM_FILE hFile) {
+    GLOB_ERROR eRetValue = GLOB_SUCCESS;
+    
+    for (PASM_LINE ptLine = hFile->ptFirstLine;
+         NULL != ptLine;
+         ptLine = ptLine->ptNext) {
+        eRetValue = asm_SecondPhaseCompileLine(hFile, ptLine);
+        if (eRetValue) {
+            return eRetValue;
+        }
+    }
+    return GLOB_SUCCESS;
+}
+
+
+static GLOB_ERROR asm_GetEntriesCallback(const char * pszName, int nAddress, void * pContext) {
+    HASM_FILE hFile = (HASM_FILE)pContext;
+    return BUFFER_AppendPrintf(hFile->hEntriesStream, "%s\t%d\n", pszName, nAddress);
+}
+
+static GLOB_ERROR asm_PrepareEntries(HASM_FILE hFile) {
+    return SYMTABLE_ForEachExport(hFile->hSymTable, asm_GetEntriesCallback, hFile);
+}
+
 GLOB_ERROR ASM_Compile(const char * szFileName, PHASM_FILE phFile) {
     HASM_FILE hFile = NULL;
     GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
@@ -575,9 +763,13 @@ GLOB_ERROR ASM_Compile(const char * szFileName, PHASM_FILE phFile) {
     /* Init fields */
     hFile->hLex = NULL;
     hFile->hSymTable = NULL;
+    hFile->hExternalsStream = NULL;
+    hFile->hEntriesStream = NULL;
     hFile->nCodeCounter = CODE_STARTUP_ADDRESS;
     hFile->nDataCounter = 0;
     hFile->bHasErrors = FALSE;
+    hFile->bHaveExternals = FALSE;
+    hFile->bHaveEntries = FALSE;
     hFile->ptFirstLine = NULL;
     hFile->ptLastLine = NULL;
     
@@ -595,6 +787,20 @@ GLOB_ERROR ASM_Compile(const char * szFileName, PHASM_FILE phFile) {
         return eRetValue;
     }
     
+    /* Create the Externals Stream */
+    eRetValue = BUFFER_Create(&hFile->hExternalsStream);
+    if (eRetValue) {
+        ASM_Close(hFile);
+        return eRetValue;
+    }    
+
+    /* Create the Entries Stream */
+    eRetValue = BUFFER_Create(&hFile->hEntriesStream);
+    if (eRetValue) {
+        ASM_Close(hFile);
+        return eRetValue;
+    }
+
     /* Start the first phase */
     eRetValue = asm_FirstPhase(hFile);
     if (eRetValue) {
@@ -607,6 +813,27 @@ GLOB_ERROR ASM_Compile(const char * szFileName, PHASM_FILE phFile) {
         /* Stop the compilation*/
         ASM_Close(hFile);
         return GLOB_ERROR_PARSING_FAILED;
+    }
+    
+    /* Finalize the symbols table */
+    eRetValue = SYMTABLE_Finalize(hFile->hSymTable, hFile->nCodeCounter);
+    if (eRetValue) {
+        ASM_Close(hFile);
+        return eRetValue;
+    }
+    
+    /* Start second phase */
+    eRetValue = asm_SecondPhase(hFile);
+    if (eRetValue) {
+        ASM_Close(hFile);
+        return eRetValue;
+    }
+    
+    /* Prepare Entries buffer */
+    eRetValue = asm_PrepareEntries(hFile);
+    if (eRetValue) {
+        ASM_Close(hFile);
+        return eRetValue;
     }
     *phFile = hFile;
     return GLOB_SUCCESS;
@@ -657,12 +884,41 @@ GLOB_ERROR ASM_WriteBinary(HASM_FILE hFile, PHMEMSTREAM phStream, int * nCode, i
     *phStream = hStream;
     *nCode = hFile->nCodeCounter - CODE_STARTUP_ADDRESS;
     *nData = hFile->nDataCounter;
+    
+    return GLOB_SUCCESS;
+}
+
+
+
+GLOB_ERROR ASM_GetEntries(HASM_FILE hFile, char ** ppszEntries, int * nLength) {
+    if (NULL == hFile || NULL == ppszEntries || NULL == nLength) {
+        return GLOB_ERROR_INVALID_PARAMETERS;
+    }
+    if (!hFile->bHaveEntries) {
+        *nLength = 0;
+        return GLOB_SUCCESS;
+    }
+    return BUFFER_GetStream(hFile->hEntriesStream, ppszEntries, nLength);
+}
+
+
+GLOB_ERROR ASM_GetExternals(HASM_FILE hFile, char ** ppszExternals, int * nLength) {
+    if (NULL == hFile || NULL == ppszExternals || NULL == nLength) {
+        return GLOB_ERROR_INVALID_PARAMETERS;
+    }
+    if (!hFile->bHaveExternals) {
+        *nLength = 0;
+        return GLOB_SUCCESS;
+    }
+    return BUFFER_GetStream(hFile->hExternalsStream, ppszExternals, nLength);
 }
 
 void ASM_Close(HASM_FILE hFile) {
     PASM_LINE ptLineToFree = NULL;
     LEX_Close(hFile->hLex);
     SYMTABLE_Free(hFile->hSymTable);
+    BUFFER_Free(hFile->hEntriesStream);
+    BUFFER_Free(hFile->hExternalsStream);
     
     /* free all lines */
     while (NULL != hFile->ptFirstLine) {

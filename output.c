@@ -78,6 +78,68 @@ static GLOB_ERROR output_WriteBinary(const char * szFileName, HASM_FILE hFile) {
     
 }
 
+static GLOB_ERROR output_WriteToFile(const char * szFileName, const char * szFileExt,
+        char * pszBuffer, int nBufferLength) {
+    char * szFullFileName = NULL;
+    FILE * phFile = NULL;
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+
+    szFullFileName = HELPER_ConcatStrings(szFileName, szFileExt);
+    if (NULL == szFullFileName) {
+        eRetValue = GLOB_ERROR_SYS_CALL_ERROR(); 
+        return eRetValue;
+    }
+    
+    phFile = fopen(szFullFileName, "w");
+    if (NULL == phFile) {
+        eRetValue = GLOB_ERROR_SYS_CALL_ERROR();
+        free(szFullFileName);
+        return eRetValue;
+    }
+    
+    if (nBufferLength != fwrite(pszBuffer, 1, nBufferLength, phFile)) {
+        eRetValue = GLOB_ERROR_SYS_CALL_ERROR();
+        fclose(phFile);
+        free(szFullFileName);
+        return eRetValue;        
+    }
+    fclose(phFile);
+    free(szFullFileName);
+    return GLOB_SUCCESS; 
+}
+
+static GLOB_ERROR output_WriteExternals(const char * szFileName, HASM_FILE hFile) {
+    char * pszBuffer = NULL;
+    int  nBufferLength = 0;
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+    eRetValue = ASM_GetExternals(hFile, &pszBuffer, &nBufferLength);
+    if (eRetValue) {
+        return eRetValue;
+    }
+    
+    if (nBufferLength > 0) {
+        return output_WriteToFile(szFileName, GLOB_FILE_EXTENSION_EXTERN,
+                pszBuffer, nBufferLength);
+    }
+    return GLOB_SUCCESS;
+}
+
+static GLOB_ERROR output_WriteEntries(const char * szFileName, HASM_FILE hFile) {
+    char * pszBuffer = NULL;
+    int  nBufferLength = 0;
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+    eRetValue = ASM_GetEntries(hFile, &pszBuffer, &nBufferLength);
+    if (eRetValue) {
+        return eRetValue;
+    }
+    
+    if (nBufferLength > 0) {
+        return output_WriteToFile(szFileName, GLOB_FILE_EXTENSION_ENTRY,
+                pszBuffer, nBufferLength);
+    }
+    return GLOB_SUCCESS;
+}
+
 GLOB_ERROR OUTPUT_WriteFiles(const char * szFileName, HASM_FILE hFile) {
     GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
     
@@ -89,5 +151,16 @@ GLOB_ERROR OUTPUT_WriteFiles(const char * szFileName, HASM_FILE hFile) {
     if (eRetValue) {
         return eRetValue;
     }
+
+    eRetValue = output_WriteExternals(szFileName, hFile);
+    if (eRetValue) {
+        return eRetValue;
+    }
+    
+    eRetValue = output_WriteEntries(szFileName, hFile);
+    if (eRetValue) {
+        return eRetValue;
+    }
+
     return GLOB_SUCCESS;
 }
