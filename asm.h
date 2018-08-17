@@ -3,6 +3,7 @@
 #define ASM_H
 
 #include "memstream.h"
+#include "lex.h"
 
 /* The HASM_FILE represents a handle to a file compiled by the ASM module.
  * Always close the handle with the ASM_Close function. */
@@ -22,7 +23,10 @@ typedef struct ASM_FILE ASM_FILE, *HASM_FILE, **PHASM_FILE;
  *          If the function fails, an error code is returned.
  * 
  *****************************************************************************/
-GLOB_ERROR ASM_Compile(const char * szFileName, PHASM_FILE phFile);
+GLOB_ERROR ASM_Compile(const char * szFileName,
+                       LEX_ErrorOrWarningCallback pfnErrorsCallback,
+                        void * pvContext,
+                       PHASM_FILE phFile);
 
 GLOB_ERROR ASM_WriteBinary(HASM_FILE hFile, PHMEMSTREAM phStream, int * nCode, int * nData);
 GLOB_ERROR ASM_GetExternals(HASM_FILE hFile, char ** ppszExternals, int * nLength);

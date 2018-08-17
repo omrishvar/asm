@@ -123,6 +123,9 @@ GLOB_ERROR LINESTR_GetNextLine(HLINESTR_FILE hFile, PLINESTR_LINE * pptLine) {
     /* Set the row number */
     ptLine->nLineNumber = hFile->nLineNumber;
     
+    /* set the reference to the file. */
+    ptLine->hFile = hFile;
+    
     /* Read the line */
     if (NULL == fgets(ptLine->szLine, sizeof(ptLine->szLine),
         hFile->phSourceFile)) {

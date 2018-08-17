@@ -84,6 +84,10 @@ typedef struct LEX_TOKEN {
  * function. Always close the handle with the LEX_Close function. */
 typedef struct LEX_FILE LEX_FILE, *HLEX_FILE, **PHLEX_FILE;
 
+typedef void (*LEX_ErrorOrWarningCallback)(void * pvContext, const char * pszFileName, int nLine,
+        int nColumn, const char * pszSourceLine,
+        BOOL bIsError, const char * pszErrorFormat, va_list vaArgs);
+
 /******************************************************************************
  * FUNCTIONS
  *****************************************************************************/
@@ -93,6 +97,8 @@ typedef struct LEX_FILE LEX_FILE, *HLEX_FILE, **PHLEX_FILE;
  * Purpose: The function opens a source file for parsing.
  * Parameters:
  *          szFileName [IN] - the path to the file to open (w/o the extension)
+ *          pfnErrorsCallback [IN] - callback function for errors/warnings
+ *          pvContext [IN] - context for the callback function
  *          phFile [OUT] - the handle to the opened file
  * Return Value:
  *          Upon successful completion, GLOB_SUCCESS is returned.
@@ -100,7 +106,10 @@ typedef struct LEX_FILE LEX_FILE, *HLEX_FILE, **PHLEX_FILE;
  *          the caller must close it with LEX_Close.
  *          If the function fails, an error code is returned.
  *****************************************************************************/
-GLOB_ERROR LEX_Open(const char * szFileName, PHLEX_FILE phFile);
+GLOB_ERROR LEX_Open(const char * szFileName,
+                    LEX_ErrorOrWarningCallback pfnErrorsCallback,
+                    void * pvContext,
+                    PHLEX_FILE phFile);
 
 /******************************************************************************
  * Name:    LEX_ReadNextToken

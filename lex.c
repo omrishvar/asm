@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
@@ -43,6 +42,12 @@ struct LEX_FILE {
     /* Handle to the LINESTR "instance" that read
      * the lines of the source file.*/
     HLINESTR_FILE hSourceFile;
+    
+    /* Callback function to use for errors and warnings */
+    LEX_ErrorOrWarningCallback pfnErrorsCallback;
+    
+    /* Context for the callback function */
+    void * pvContext;
     
     /* The current line that we parse into tokens. */
     PLINESTR_LINE ptCurrentLine;
@@ -125,24 +130,15 @@ static const LEX_PARSER g_afParsers[] = {
   *****************************************************************************/
 static void lex_ReportError(HLEX_FILE hFile, BOOL bIsError, int nColumn,
                             const char * pszErrorFormat, ...) {
-    int nIndex = 0;
-    
-    /* Print the error message. */
-    printf("%s:%d:%d %s: ", LINESTR_GetFullFileName(hFile->hSourceFile), hFile->ptCurrentLine->nLineNumber,
-            nColumn+1, bIsError ? "error" : "warning");
     va_list vaArgs;
     va_start (vaArgs, pszErrorFormat);
-    vprintf (pszErrorFormat, vaArgs);
+    hFile->pfnErrorsCallback(hFile->pvContext,
+                             LINESTR_GetFullFileName(hFile->hSourceFile),
+                             hFile->ptCurrentLine->nLineNumber,
+                             nColumn+1, 
+                             hFile->ptCurrentLine->szLine,
+                             bIsError, pszErrorFormat, vaArgs);
     va_end (vaArgs);
-    
-    /* Print the source line. */
-    printf("\n%s\n", hFile->ptCurrentLine->szLine);
-    
-    /* Print an arrow below the error. */
-    for (nIndex = 0; nIndex < nColumn; nIndex++){
-        printf(" ");
-    }
-    printf("^\n");
 }
 
 /******************************************************************************
@@ -509,7 +505,10 @@ static GLOB_ERROR lex_MoveToNextToken(HLEX_FILE hFile,
 /******************************************************************************
  * LEX_Open
  *****************************************************************************/
-GLOB_ERROR LEX_Open(const char * szFileName, PHLEX_FILE phFile){
+GLOB_ERROR LEX_Open(const char * szFileName,
+                    LEX_ErrorOrWarningCallback pfnErrorsCallback,
+                    void * pvContext,
+                    PHLEX_FILE phFile){
     GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
     HLEX_FILE hFile = NULL;
     
@@ -525,6 +524,8 @@ GLOB_ERROR LEX_Open(const char * szFileName, PHLEX_FILE phFile){
     }
     
     /* Init fields */
+    hFile->pfnErrorsCallback = pfnErrorsCallback;
+    hFile->pvContext = pvContext;
     hFile->ptCurrentLine = NULL;
     hFile->nCurrentColumn = 0;
     hFile->nCurrentLineLength = 0;

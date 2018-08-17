@@ -73,7 +73,10 @@ typedef struct ASM_LINE {
 struct ASM_FILE {
     /* Handle to the LEX "instance" that parse the file. */
     HLEX_FILE hLex;
-    
+
+    LEX_ErrorOrWarningCallback pfnErrorsCallback;
+    void * pvErrorsCallbackContext;
+
     HSYMTABLE_TABLE hSymTable;
     HBUFFER hExternalsStream;
     HBUFFER hEntriesStream;
@@ -122,7 +125,29 @@ int g_znAllowedOperands[] =
  *          pszErroFormat[IN] - error message (format as printf syntax)
  *          ... [IN] - parameters to include in the message
   *****************************************************************************/
-static void asm_ReportError(HASM_FILE hFile, BOOL bIsError,
+static void asm_ReportError(HASM_FILE hFile, BOOL bIsError, PLEX_TOKEN ptToken,
+                            const char * pszErrorFormat, ...) {
+    int nIndex = 0;
+    /* Print the error message. */
+    printf("%s:%d:%d %s: ", LINESTR_GetFullFileName(ptToken->ptLine->hFile),
+            ptToken->ptLine->nLineNumber,
+            ptToken->nColumn+1, bIsError ? "error" : "warning");
+    va_list vaArgs;
+    va_start (vaArgs, pszErrorFormat);
+    vprintf (pszErrorFormat, vaArgs);
+    va_end (vaArgs);
+    
+    /* Print the source line. */
+    printf("\n%s\n", ptToken->ptLine->szLine);
+    
+    /* Print an arrow below the error. */
+    for (nIndex = 0; nIndex < ptToken->nColumn; nIndex++){
+        printf(" ");
+    }
+    printf("^\n");
+}
+
+static void asm_ReportErrorWithoutToken(HASM_FILE hFile, BOOL bIsError,
                             const char * pszErrorFormat, ...) {    
     /* Print the error message. */
     printf("%s ", bIsError ? "error" : "warning");
@@ -141,7 +166,7 @@ static GLOB_ERROR asm_FirstPhaseCompileString(HASM_FILE hFile, PASM_LINE ptLine)
     }
     
     if (GLOB_ERROR_END_OF_LINE == eRetValue || ptStringToken->eKind != LEX_TOKEN_KIND_STRING) {
-        asm_ReportError(hFile, TRUE, "String is expected");
+        asm_ReportError(hFile, TRUE, ptStringToken, "String is expected");
         if (GLOB_SUCCESS == eRetValue) {
             LEX_FreeToken(ptStringToken);
         }
@@ -166,7 +191,7 @@ static GLOB_ERROR asm_FirstPhaseCompileData(HASM_FILE hFile, PASM_LINE ptLine) {
         }
 
         if (GLOB_ERROR_END_OF_LINE == eRetValue || ptToken->eKind != LEX_TOKEN_KIND_NUMBER) {
-            asm_ReportError(hFile, TRUE, "Number (data) is expected");
+            asm_ReportErrorWithoutToken(hFile, TRUE, "Number (data) is expected");
             if (GLOB_SUCCESS == eRetValue) {
                 LEX_FreeToken(ptToken);
             }
@@ -198,7 +223,7 @@ static GLOB_ERROR asm_FirstPhaseCompileExtern(HASM_FILE hFile, PASM_LINE ptLine)
         }
 
         if (GLOB_ERROR_END_OF_LINE == eRetValue || ptToken->eKind != LEX_TOKEN_KIND_WORD) {
-            asm_ReportError(hFile, TRUE, "identifier is expected");
+            asm_ReportErrorWithoutToken(hFile, TRUE, "identifier is expected");
             if (GLOB_SUCCESS == eRetValue) {
                 LEX_FreeToken(ptToken);
             }
@@ -207,7 +232,7 @@ static GLOB_ERROR asm_FirstPhaseCompileExtern(HASM_FILE hFile, PASM_LINE ptLine)
         
         eRetValue = SYMTABLE_Insert(hFile->hSymTable, ptToken->uValue.szStr, SYMTABLE_SYMTYPE_CODE, 0, TRUE);
         if (GLOB_ERROR_ALREADY_EXIST == eRetValue) {
-            asm_ReportError(hFile, TRUE, "label already exist");
+            asm_ReportErrorWithoutToken(hFile, TRUE, "label already exist");
             LEX_FreeToken(ptToken);
    
             return GLOB_ERROR_PARSING_FAILED;
@@ -242,7 +267,7 @@ static GLOB_ERROR asm_FirstPhaseCompileEntry(HASM_FILE hFile, PASM_LINE ptLine) 
         }
 
         if (GLOB_ERROR_END_OF_LINE == eRetValue || ptToken->eKind != LEX_TOKEN_KIND_WORD) {
-            asm_ReportError(hFile, TRUE, "identifier is expected");
+            asm_ReportErrorWithoutToken(hFile, TRUE, "identifier is expected");
             if (GLOB_SUCCESS == eRetValue) {
                 LEX_FreeToken(ptToken);
             }
@@ -251,7 +276,7 @@ static GLOB_ERROR asm_FirstPhaseCompileEntry(HASM_FILE hFile, PASM_LINE ptLine) 
         
         eRetValue = SYMTABLE_MarkForExport(hFile->hSymTable, ptToken->uValue.szStr);
         if (GLOB_ERROR_EXPORT_AND_EXTERN == eRetValue) {
-            asm_ReportError(hFile, TRUE, "label already defined as extern");
+            asm_ReportErrorWithoutToken(hFile, TRUE, "label already defined as extern");
             LEX_FreeToken(ptToken);
             return GLOB_ERROR_PARSING_FAILED;
         }
@@ -288,7 +313,7 @@ static GLOB_ERROR asm_FirstPhaseReadParameterOperand(HASM_FILE hFile, PASM_LINE 
         return eRetValue;
     }
     if (LEX_TOKEN_KIND_SPECIAL != ptToken->eKind || '(' != ptToken->uValue.cChar) {
-        asm_ReportError(hFile, TRUE, "a '(' or end of line is expected");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "a '(' or end of line is expected");
         LEX_FreeToken(ptToken);
         return GLOB_ERROR_PARSING_FAILED;
     }
@@ -305,7 +330,7 @@ static GLOB_ERROR asm_FirstPhaseReadParameterOperand(HASM_FILE hFile, PASM_LINE 
         return eRetValue;
     }
     if (LEX_TOKEN_KIND_SPECIAL != ptToken->eKind || ',' != ptToken->uValue.cChar) {
-        asm_ReportError(hFile, TRUE, "a ',' is expected");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "a ',' is expected");
         LEX_FreeToken(ptToken);
         return GLOB_ERROR_PARSING_FAILED;
     }
@@ -323,7 +348,7 @@ static GLOB_ERROR asm_FirstPhaseReadParameterOperand(HASM_FILE hFile, PASM_LINE 
         return eRetValue;
     }
     if (LEX_TOKEN_KIND_SPECIAL != ptToken->eKind || ')' != ptToken->uValue.cChar) {
-        asm_ReportError(hFile, TRUE, "a ')' is expected");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "a ')' is expected");
         LEX_FreeToken(ptToken);
         return GLOB_ERROR_PARSING_FAILED;
     }
@@ -344,7 +369,7 @@ static GLOB_ERROR asm_FirstPhaseReadOperand(HASM_FILE hFile, ASM_OPERAND_METHOD 
         return eRetValue;
     }
     if (GLOB_ERROR_END_OF_LINE == eRetValue) {
-        asm_ReportError(hFile, TRUE, "an operand is expected");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "an operand is expected");
         return GLOB_ERROR_PARSING_FAILED;
     }
     if (ASM_IS_IMMEDIATE_OPERAND_ALLOWED(nAllowedOperandType) && LEX_TOKEN_KIND_IMMED_NUMBER == ptToken->eKind) {
@@ -357,7 +382,7 @@ static GLOB_ERROR asm_FirstPhaseReadOperand(HASM_FILE hFile, ASM_OPERAND_METHOD 
     } else if (ASM_IS_REGISTER_OPERAND_ALLOWED(nAllowedOperandType) && LEX_TOKEN_KIND_REGISTER == ptToken->eKind) {
         eMethod = ASM_OPERAND_METHOD_REGISTER;
     } else {
-        asm_ReportError(hFile, TRUE, "Unsupported operand");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "Unsupported operand");
         LEX_FreeToken(ptToken);
         return GLOB_ERROR_PARSING_FAILED;
     }
@@ -401,11 +426,11 @@ static GLOB_ERROR asm_FirstPhaseCompileSourceOperand(HASM_FILE hFile, GLOB_OPCOD
         return eRetValue;
     }
     if (GLOB_ERROR_END_OF_LINE == eRetValue) {
-        asm_ReportError(hFile, TRUE, "a comma is expected");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "a comma is expected");
         return GLOB_ERROR_PARSING_FAILED;
     }
     if (LEX_TOKEN_KIND_SPECIAL != ptCommaToken->eKind || ',' != ptCommaToken->uValue.cChar) {
-        asm_ReportError(hFile, TRUE, "a comma is expected");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "a comma is expected");
         LEX_FreeToken(ptCommaToken);
         return GLOB_ERROR_PARSING_FAILED;
     }
@@ -482,13 +507,13 @@ static GLOB_ERROR asm_HandleLabelDefinition(HASM_FILE hFile, PLEX_TOKEN * pptTok
     eRetValue = LEX_ReadNextToken(hFile->hLex, pptToken);
     if (GLOB_ERROR_END_OF_LINE == eRetValue) {
         /* Line can't contain only a label definition */
-        asm_ReportError(hFile, TRUE, "an opcode or directive is expected");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "an opcode or directive is expected");
         LEX_FreeToken(ptLabelToken);
         return GLOB_ERROR_PARSING_FAILED;
     }
     
     if (LEX_TOKEN_KIND_DIRECTIVE != (*pptToken)->eKind && LEX_TOKEN_KIND_OPCODE != (*pptToken)->eKind) {
-        asm_ReportError(hFile, TRUE, "an opcode or directive is expected");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "an opcode or directive is expected");
         LEX_FreeToken(ptLabelToken);
         return GLOB_ERROR_PARSING_FAILED;        
     }
@@ -500,7 +525,7 @@ static GLOB_ERROR asm_HandleLabelDefinition(HASM_FILE hFile, PLEX_TOKEN * pptTok
         if (GLOB_DIRECTIVE_EXTERN == (*pptToken)->uValue.eDiretive
                 || GLOB_DIRECTIVE_ENTRY == (*pptToken)->uValue.eDiretive) {
             /* Label definition in .extern or .entry. report a warning and ignore */
-            asm_ReportError(hFile, FALSE, "Label is defined in .extern or .entry statement");
+            asm_ReportErrorWithoutToken(hFile, FALSE, "Label is defined in .extern or .entry statement");
             LEX_FreeToken(ptLabelToken);
             return GLOB_SUCCESS;
         }
@@ -512,7 +537,7 @@ static GLOB_ERROR asm_HandleLabelDefinition(HASM_FILE hFile, PLEX_TOKEN * pptTok
     eRetValue = SYMTABLE_Insert(hFile->hSymTable, ptLabelToken->uValue.szStr,
                      eLabelType, nLabelAddress, FALSE);
     if (GLOB_ERROR_ALREADY_EXIST == eRetValue) {
-        asm_ReportError(hFile, TRUE, "Duplicate label definition");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "Duplicate label definition");
         LEX_FreeToken(ptLabelToken);
         return GLOB_SUCCESS; // return with SUCCESS to continue parsing the line
     }
@@ -543,7 +568,7 @@ static GLOB_ERROR asm_FirstPhaseCompileLineContent(HASM_FILE hFile, PLEX_TOKEN p
     } else if (LEX_TOKEN_KIND_OPCODE == ptToken->eKind) {
         eRetValue = asm_FirstPhaseCompileOpcode(hFile, ptToken->uValue.eOpcode, ptLine);
     } else {
-        asm_ReportError(hFile, TRUE, "an opcode or directive is expected");
+        asm_ReportErrorWithoutToken(hFile, TRUE, "an opcode or directive is expected");
         eRetValue = GLOB_ERROR_PARSING_FAILED;
     }
     LEX_FreeToken(ptToken);
@@ -680,7 +705,7 @@ static GLOB_ERROR asm_SecondPhaseCompileLine(HASM_FILE hFile, PASM_LINE ptLine) 
                         ptLine->aptOperands[nIndex]->uValue.szStr,
                         &nLabelAddress, &bIsExtern);
                 if (GLOB_ERROR_NOT_FOUND == eRetValue) {
-                    asm_ReportError(hFile, TRUE, "Missing label");
+                    asm_ReportErrorWithoutToken(hFile, TRUE, "Missing label");
                     return GLOB_SUCCESS;
                 }
                 if (bIsExtern) {
@@ -740,7 +765,6 @@ static GLOB_ERROR asm_SecondPhase(HASM_FILE hFile) {
     return GLOB_SUCCESS;
 }
 
-
 static GLOB_ERROR asm_SymTableForEachCallback(const char * pszName, int nAddress, 
         BOOL bIsMarkedForExport, void * pContext) {
     HASM_FILE hFile = (HASM_FILE)pContext;
@@ -754,7 +778,10 @@ static GLOB_ERROR asm_PrepareEntries(HASM_FILE hFile) {
     return SYMTABLE_ForEach(hFile->hSymTable, asm_SymTableForEachCallback, hFile);
 }
 
-GLOB_ERROR ASM_Compile(const char * szFileName, PHASM_FILE phFile) {
+GLOB_ERROR ASM_Compile(const char * szFileName,
+                       LEX_ErrorOrWarningCallback pfnErrorsCallback,
+                        void * pvContext,
+                       PHASM_FILE phFile) {
     HASM_FILE hFile = NULL;
     GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
 
@@ -765,6 +792,8 @@ GLOB_ERROR ASM_Compile(const char * szFileName, PHASM_FILE phFile) {
     }
     
     /* Init fields */
+    hFile->pfnErrorsCallback = pfnErrorsCallback;
+    hFile->pvErrorsCallbackContext = pvContext;
     hFile->hLex = NULL;
     hFile->hSymTable = NULL;
     hFile->hExternalsStream = NULL;
@@ -778,7 +807,7 @@ GLOB_ERROR ASM_Compile(const char * szFileName, PHASM_FILE phFile) {
     hFile->ptLastLine = NULL;
     
     /* Open the file for parsing. */
-    eRetValue = LEX_Open(szFileName, &hFile->hLex);
+    eRetValue = LEX_Open(szFileName, pfnErrorsCallback, pvContext, &hFile->hLex);
     if (eRetValue) {
         ASM_Close(hFile);
         return eRetValue;

@@ -39,6 +39,9 @@ typedef struct LINESTR_LINE {
      * First row gets 1. */
     int nLineNumber;
     
+    /* handle to the file contains this line. */
+    HLINESTR_FILE hFile;
+    
     /* References. For internal use of the modules. Don't modify! */
     int nReferences;
 } LINESTR_LINE, *PLINESTR_LINE, **PPLINESTR_LINE;
