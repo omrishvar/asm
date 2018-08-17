@@ -40,7 +40,6 @@ OBJECTFILES= \
 	${OBJECTDIR}/helper.o \
 	${OBJECTDIR}/lex.o \
 	${OBJECTDIR}/linestr.o \
-	${OBJECTDIR}/list.o \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/memstream.o \
 	${OBJECTDIR}/output.o \
@@ -95,11 +94,6 @@ ${OBJECTDIR}/linestr.o: linestr.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -g -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/linestr.o linestr.c
-
-${OBJECTDIR}/list.o: list.c
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.c) -g -Wall -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/list.o list.c
 
 ${OBJECTDIR}/main.o: main.c
 	${MKDIR} -p ${OBJECTDIR}

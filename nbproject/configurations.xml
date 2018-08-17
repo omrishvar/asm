@@ -9,9 +9,7 @@
       <itemPath>global.h</itemPath>
       <itemPath>helper.h</itemPath>
       <itemPath>lex.h</itemPath>
-      <itemPath>line.h</itemPath>
       <itemPath>linestr.h</itemPath>
-      <itemPath>list.h</itemPath>
       <itemPath>memstream.h</itemPath>
       <itemPath>output.h</itemPath>
       <itemPath>symtable.h</itemPath>
@@ -28,7 +26,6 @@
       <itemPath>helper.c</itemPath>
       <itemPath>lex.c</itemPath>
       <itemPath>linestr.c</itemPath>
-      <itemPath>list.c</itemPath>
       <itemPath>main.c</itemPath>
       <itemPath>memstream.c</itemPath>
       <itemPath>output.c</itemPath>
@@ -136,15 +133,9 @@
       </item>
       <item path="lex.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="line.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="linestr.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="linestr.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="list.c" ex="false" tool="0" flavor2="0">
-      </item>
-      <item path="list.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -247,15 +238,9 @@
       </item>
       <item path="lex.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="line.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="linestr.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="linestr.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="list.c" ex="false" tool="0" flavor2="0">
-      </item>
-      <item path="list.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.c" ex="false" tool="0" flavor2="0">
       </item>

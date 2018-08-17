@@ -321,7 +321,7 @@ static GLOB_ERROR lex_ParseNumber(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
  * Return Value:
  *          see LEX_PARSER declaration above
  *****************************************************************************/
-GLOB_ERROR lex_ParseString(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
+static GLOB_ERROR lex_ParseString(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
     /* Strings begin with the '"' character*/
     if ('"' != hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]) {
         return GLOB_ERROR_CONTINUE;

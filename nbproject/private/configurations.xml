@@ -28,8 +28,9 @@
         <runcommandpicklist>
           <runcommandpicklistitem>"${OUTPUT_PATH}"</runcommandpicklistitem>
           <runcommandpicklistitem>"${OUTPUT_PATH}" bacon</runcommandpicklistitem>
+          <runcommandpicklistitem>"${OUTPUT_PATH}" sample</runcommandpicklistitem>
         </runcommandpicklist>
-        <runcommand>"${OUTPUT_PATH}" bacon</runcommand>
+        <runcommand>"${OUTPUT_PATH}" sample</runcommand>
         <rundir></rundir>
         <buildfirst>true</buildfirst>
         <terminal-type>0</terminal-type>

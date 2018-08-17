@@ -74,7 +74,7 @@ struct ASM_FILE {
     /* Handle to the LEX "instance" that parse the file. */
     HLEX_FILE hLex;
     
-    PSYMTABLE_TABLE hSymTable;
+    HSYMTABLE_TABLE hSymTable;
     HBUFFER hExternalsStream;
     HBUFFER hEntriesStream;
    
@@ -741,13 +741,17 @@ static GLOB_ERROR asm_SecondPhase(HASM_FILE hFile) {
 }
 
 
-static GLOB_ERROR asm_GetEntriesCallback(const char * pszName, int nAddress, void * pContext) {
+static GLOB_ERROR asm_SymTableForEachCallback(const char * pszName, int nAddress, 
+        BOOL bIsMarkedForExport, void * pContext) {
     HASM_FILE hFile = (HASM_FILE)pContext;
+    if (!bIsMarkedForExport) {
+        return GLOB_SUCCESS;
+    }
     return BUFFER_AppendPrintf(hFile->hEntriesStream, "%s\t%d\n", pszName, nAddress);
 }
 
 static GLOB_ERROR asm_PrepareEntries(HASM_FILE hFile) {
-    return SYMTABLE_ForEachExport(hFile->hSymTable, asm_GetEntriesCallback, hFile);
+    return SYMTABLE_ForEach(hFile->hSymTable, asm_SymTableForEachCallback, hFile);
 }
 
 GLOB_ERROR ASM_Compile(const char * szFileName, PHASM_FILE phFile) {
