@@ -74,7 +74,7 @@ struct ASM_FILE {
     /* Handle to the LEX "instance" that parse the file. */
     HLEX_FILE hLex;
 
-    LEX_ErrorOrWarningCallback pfnErrorsCallback;
+    GLOB_ErrorOrWarningCallback pfnErrorsCallback;
     void * pvErrorsCallbackContext;
 
     HSYMTABLE_TABLE hSymTable;
@@ -127,24 +127,15 @@ int g_znAllowedOperands[] =
   *****************************************************************************/
 static void asm_ReportError(HASM_FILE hFile, BOOL bIsError, PLEX_TOKEN ptToken,
                             const char * pszErrorFormat, ...) {
-    int nIndex = 0;
-    /* Print the error message. */
-    printf("%s:%d:%d %s: ", LINESTR_GetFullFileName(ptToken->ptLine->hFile),
-            ptToken->ptLine->nLineNumber,
-            ptToken->nColumn+1, bIsError ? "error" : "warning");
     va_list vaArgs;
     va_start (vaArgs, pszErrorFormat);
-    vprintf (pszErrorFormat, vaArgs);
+    hFile->pfnErrorsCallback(hFile->pvErrorsCallbackContext,
+                             LINESTR_GetFullFileName(ptToken->ptLine->hFile),
+                             ptToken->ptLine->nLineNumber,
+                             ptToken->nColumn+1, 
+                             ptToken->ptLine->szLine,
+                             bIsError, pszErrorFormat, vaArgs);
     va_end (vaArgs);
-    
-    /* Print the source line. */
-    printf("\n%s\n", ptToken->ptLine->szLine);
-    
-    /* Print an arrow below the error. */
-    for (nIndex = 0; nIndex < ptToken->nColumn; nIndex++){
-        printf(" ");
-    }
-    printf("^\n");
 }
 
 static void asm_ReportErrorWithoutToken(HASM_FILE hFile, BOOL bIsError,
@@ -779,7 +770,7 @@ static GLOB_ERROR asm_PrepareEntries(HASM_FILE hFile) {
 }
 
 GLOB_ERROR ASM_Compile(const char * szFileName,
-                       LEX_ErrorOrWarningCallback pfnErrorsCallback,
+                       GLOB_ErrorOrWarningCallback pfnErrorsCallback,
                         void * pvContext,
                        PHASM_FILE phFile) {
     HASM_FILE hFile = NULL;

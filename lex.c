@@ -44,7 +44,7 @@ struct LEX_FILE {
     HLINESTR_FILE hSourceFile;
     
     /* Callback function to use for errors and warnings */
-    LEX_ErrorOrWarningCallback pfnErrorsCallback;
+    GLOB_ErrorOrWarningCallback pfnErrorsCallback;
     
     /* Context for the callback function */
     void * pvContext;
@@ -252,7 +252,8 @@ static GLOB_ERROR lex_ParseImmediateNumber(HLEX_FILE hFile, PLEX_TOKEN ptToken){
     /* Now we expect a number*/
     eRetValue = lex_ParseNumber(hFile, ptToken);
     if (GLOB_ERROR_CONTINUE == eRetValue) {
-        lex_ReportError(hFile, TRUE, hFile->nCurrentColumn, "a number is expected");
+        lex_ReportError(hFile, TRUE, hFile->nCurrentColumn,
+                "a number is expected");
         return GLOB_ERROR_PARSING_FAILED;
     }
     if (eRetValue) {
@@ -293,13 +294,15 @@ static GLOB_ERROR lex_ParseNumber(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
     while ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
             && isdigit(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])) {
         bFoundDigit = TRUE;
-        nValue = 10*nValue + hFile->ptCurrentLine->szLine[hFile->nCurrentColumn] - '0';
+        nValue = 10*nValue +
+                hFile->ptCurrentLine->szLine[hFile->nCurrentColumn] - '0';
         hFile->nCurrentColumn++;
     }
     
     /* Check that we have at least one digit */
     if (!bFoundDigit) {
-        lex_ReportError(hFile, TRUE, ptToken->nColumn, "A number must incluse at least one digit");
+        lex_ReportError(hFile, TRUE, ptToken->nColumn,
+                "A number must incluse at least one digit");
         return GLOB_ERROR_PARSING_FAILED;
     }
     
@@ -378,7 +381,7 @@ static GLOB_ERROR lex_ParseAlpha(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
     /* The remaining characters may be either letters or digits */
     while ((hFile->nCurrentColumn < hFile->nCurrentLineLength)
             && (isalpha(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn])
-                ||isdigit(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]))) {
+               ||isdigit(hFile->ptCurrentLine->szLine[hFile->nCurrentColumn]))){
         hFile->nCurrentColumn++;
     }
     
@@ -465,7 +468,8 @@ static GLOB_ERROR lex_MoveToNextToken(HLEX_FILE hFile,
     
     /* If no line is in parsing, read the next line. */
     if (NULL == hFile->ptCurrentLine) {
-        eRetValue = LINESTR_GetNextLine(hFile->hSourceFile, &hFile->ptCurrentLine);
+        eRetValue = LINESTR_GetNextLine(hFile->hSourceFile,
+                                        &hFile->ptCurrentLine);
         if (eRetValue) {
             /* Including EOF */
             return eRetValue;
@@ -506,7 +510,7 @@ static GLOB_ERROR lex_MoveToNextToken(HLEX_FILE hFile,
  * LEX_Open
  *****************************************************************************/
 GLOB_ERROR LEX_Open(const char * szFileName,
-                    LEX_ErrorOrWarningCallback pfnErrorsCallback,
+                    GLOB_ErrorOrWarningCallback pfnErrorsCallback,
                     void * pvContext,
                     PHLEX_FILE phFile){
     GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;

@@ -84,10 +84,6 @@ typedef struct LEX_TOKEN {
  * function. Always close the handle with the LEX_Close function. */
 typedef struct LEX_FILE LEX_FILE, *HLEX_FILE, **PHLEX_FILE;
 
-typedef void (*LEX_ErrorOrWarningCallback)(void * pvContext, const char * pszFileName, int nLine,
-        int nColumn, const char * pszSourceLine,
-        BOOL bIsError, const char * pszErrorFormat, va_list vaArgs);
-
 /******************************************************************************
  * FUNCTIONS
  *****************************************************************************/
@@ -107,7 +103,7 @@ typedef void (*LEX_ErrorOrWarningCallback)(void * pvContext, const char * pszFil
  *          If the function fails, an error code is returned.
  *****************************************************************************/
 GLOB_ERROR LEX_Open(const char * szFileName,
-                    LEX_ErrorOrWarningCallback pfnErrorsCallback,
+                    GLOB_ErrorOrWarningCallback pfnErrorsCallback,
                     void * pvContext,
                     PHLEX_FILE phFile);
 

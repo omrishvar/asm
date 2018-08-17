@@ -71,5 +71,10 @@ typedef enum GLOB_ERROR {
             GLOB_ERROR_UNKNOWN,
             
 } GLOB_ERROR;
+
+typedef void (*GLOB_ErrorOrWarningCallback)(void * pvContext, const char * pszFileName, int nLine,
+        int nColumn, const char * pszSourceLine,
+        BOOL bIsError, const char * pszErrorFormat, va_list vaArgs);
+
 #endif /* GLOBAL_H */
 
