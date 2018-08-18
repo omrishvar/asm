@@ -82,7 +82,6 @@ static GLOB_ERROR symtable_InsertRecord(HSYMTABLE_TABLE hTable,
                                         BOOL isExtern,
                                         BOOL markedForExport);
 
-
 /******************************************************************************
  * INTERNAL FUNCTIONS
  *****************************************************************************/

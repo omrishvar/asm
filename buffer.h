@@ -1,19 +1,12 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/* 
- * File:   buffer.h
- * Author: boazgildor
- *
- * Created on August 14, 2018, 4:58 PM
- */
+/******************************************************************************
+ * File:    buffer.h
+ * Author:  Doron Shvartztuch
+ * The BUFFER module provides memory stream functionality.
+ * The basic unit of the stream is char.
+ *****************************************************************************/
 
 #ifndef BUFFER_H
 #define BUFFER_H
-
 
 /******************************************************************************
  * INCLUDES
@@ -24,7 +17,7 @@
  * TYPEDEFS
  *****************************************************************************/
 
-/* The HBUFFER represents a handle to a memory stream.
+/* The HBUFFER represents a handle to the stream.
  * Always free the stream with the BUFFER_Free function */
 typedef struct BUFFER BUFFER, *HBUFFER, **PHBUFFER;
 
@@ -43,20 +36,6 @@ typedef struct BUFFER BUFFER, *HBUFFER, **PHBUFFER;
  *****************************************************************************/
 GLOB_ERROR BUFFER_Create(PHBUFFER phStream);
 
-/******************************************************************************
- * Name:    BUFFER_AppendString
- * Purpose: Write a string to the stream 
- * Parameters:
- *          hStream [IN] - the handle to the stream
- *          pszStr [IN] - the string to write into the stream
- * Return Value:
- *          Upon successful completion, GLOB_SUCCESS is returned.
- *          If the function fails, an error code is returned.
- * Remark:  The function also write the NULL-terminator to the stream
- *****************************************************************************/
-GLOB_ERROR BUFFER_AppendString(HBUFFER hStream, const char * pszStr);
-
-
 GLOB_ERROR BUFFER_AppendPrintf(HBUFFER hStream, const char * pszFormat, ...);
 
 /******************************************************************************
@@ -65,7 +44,7 @@ GLOB_ERROR BUFFER_AppendPrintf(HBUFFER hStream, const char * pszFormat, ...);
  * Parameters:
  *          hStream [IN] - the handle to the stream.
  *          ppnStream [OUT] - pointer to the beginning of the memory block
- *          pnStreamLength [OUT] - size (in 'int') of the memory block
+ *          pnStreamLength [OUT] - size (in bytes) of the memory block
  * Return Value:
  *          Upon successful completion, GLOB_SUCCESS is returned.
  *          If the function fails, an error code is returned.

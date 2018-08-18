@@ -24,7 +24,7 @@ typedef struct ASM_FILE ASM_FILE, *HASM_FILE, **PHASM_FILE;
  * 
  *****************************************************************************/
 GLOB_ERROR ASM_Compile(const char * szFileName,
-                       GLOB_ErrorOrWarningCallback pfnErrorsCallback,
+                       GLOB_ERRORCALLBACK pfnErrorsCallback,
                         void * pvContext,
                        PHASM_FILE phFile);
 

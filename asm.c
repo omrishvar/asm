@@ -74,7 +74,7 @@ struct ASM_FILE {
     /* Handle to the LEX "instance" that parse the file. */
     HLEX_FILE hLex;
 
-    GLOB_ErrorOrWarningCallback pfnErrorsCallback;
+    GLOB_ERRORCALLBACK pfnErrorsCallback;
     void * pvErrorsCallbackContext;
 
     HSYMTABLE_TABLE hSymTable;
@@ -770,7 +770,7 @@ static GLOB_ERROR asm_PrepareEntries(HASM_FILE hFile) {
 }
 
 GLOB_ERROR ASM_Compile(const char * szFileName,
-                       GLOB_ErrorOrWarningCallback pfnErrorsCallback,
+                       GLOB_ERRORCALLBACK pfnErrorsCallback,
                         void * pvContext,
                        PHASM_FILE phFile) {
     HASM_FILE hFile = NULL;

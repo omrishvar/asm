@@ -25,8 +25,8 @@ typedef enum SYMTABLE_SYMTYPE {
 
 /* The SYMTABLE_FOREACH_CALLBACK is the prototype of the callback function
  * when enumerating the symbols marked for export.
- * See SYMTABLE_ForEachExport for more information.
-* Parameters:
+ * See SYMTABLE_ForEach for more information.
+ * Parameters:
  *          szSymbolName [IN] - the symbol name
  *          nAddress [IN] - the address of the symbol
  *          bIsMarkedForExport [IN] - whether the symbol is for export
@@ -34,7 +34,7 @@ typedef enum SYMTABLE_SYMTYPE {
  * Return Value:
  *          GLOB_SUCCESS - to continue the enumeration.
  *          any other value - stop the enumeration */
- typedef GLOB_ERROR (*SYMTABLE_FOREACH_CALLBACK)(const char *szSymbolName,
+typedef GLOB_ERROR (*SYMTABLE_FOREACH_CALLBACK)(const char *szSymbolName,
                                                 int nAddress,
                                                 BOOL bIsMarkedForExport,
                                                 void * pvContext);

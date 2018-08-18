@@ -19,9 +19,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
-#include "linestr.h"
-#include "global.h"
 #include "helper.h"
+#include "global.h"
+#include "linestr.h"
 #include "lex.h"
 
 /******************************************************************************
@@ -44,7 +44,7 @@ struct LEX_FILE {
     HLINESTR_FILE hSourceFile;
     
     /* Callback function to use for errors and warnings */
-    GLOB_ErrorOrWarningCallback pfnErrorsCallback;
+    GLOB_ERRORCALLBACK pfnErrorsCallback;
     
     /* Context for the callback function */
     void * pvContext;
@@ -510,7 +510,7 @@ static GLOB_ERROR lex_MoveToNextToken(HLEX_FILE hFile,
  * LEX_Open
  *****************************************************************************/
 GLOB_ERROR LEX_Open(const char * szFileName,
-                    GLOB_ErrorOrWarningCallback pfnErrorsCallback,
+                    GLOB_ERRORCALLBACK pfnErrorsCallback,
                     void * pvContext,
                     PHLEX_FILE phFile){
     GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;

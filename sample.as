@@ -1,5 +1,4 @@
-.sd;file sample.as
-.string 123
+;file sample.as
 .entry  LENGTH
 .extern W
 MAIN:   mov r3, LENGTH

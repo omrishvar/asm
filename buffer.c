@@ -1,10 +1,11 @@
 /******************************************************************************
  * File:    buffer.c
  * Author:  Doron Shvartztuch
- * The MEMSTREAM module provides memory stream functionality.
+ * The BUFFER module provides memory stream functionality.
+ * The basic unit of the stream is char.
  * 
  * Implementation:
- * The memory stream is based on dynamic allocated array of integers.
+ * The memory stream is based on dynamic allocated array of chars.
  * We use realloc to expand the array when there is not enough space 
  *****************************************************************************/
 
@@ -23,20 +24,51 @@
  *****************************************************************************/
 
 /* The default size of a stream */
-#define BUFFER_DEFAULT_SIZE 4
+#define BUFFER_DEFAULT_SIZE 32
 #define BUFFER_EXPAND_FACTOR 2
+
+/* maximum size (in chars) of strings we can write to the buffer */
+#define MAX_STRING_SIZE 80
 
 /******************************************************************************
  * TYPEDEFS
  *****************************************************************************/
 
+/* BUFFER  is the struct behind the the HBUFFER.
+ * It keeps some information about the stream */
 struct BUFFER {
+    /* Pointer to the dynamic allocated stream */
     char * pnStream;
+    
+    /* Allocated size (bytes) */
     int nAllocated;
+    
+    /* Used (bytes) */
     int nUsed;
 };
 
-static GLOB_ERROR memstream_EnsureSpace(HBUFFER hStream, int nSpace) {
+/******************************************************************************
+ * INTERNAL FUNCTIONS (prototypes)
+ * -------------------------------
+ * See function-level documentation next to the implementation below
+ *****************************************************************************/
+static GLOB_ERROR buffer_EnsureSpace(HBUFFER hStream, int nSpace);
+
+/******************************************************************************
+ * INTERNAL FUNCTIONS
+ *****************************************************************************/
+
+/******************************************************************************
+ * Name:    buffer_EnsureSpace
+ * Purpose: Ensure there is enough free space in the stream
+ * Parameters:
+ *          hStream [IN] - the stream
+ *          nSpace [IN] - size of free space (in bytes) we need in the stream
+ * Return Value:
+ *          Upon successful completion, GLOB_SUCCESS is returned.
+ *          If the function fails, an error code is returned.
+ *****************************************************************************/
+static GLOB_ERROR buffer_EnsureSpace(HBUFFER hStream, int nSpace) {
     int nNeedToAllocate = 0;
     char * pnNewStream = NULL;
     
@@ -46,9 +78,10 @@ static GLOB_ERROR memstream_EnsureSpace(HBUFFER hStream, int nSpace) {
         /* No need to allocate */
         return GLOB_SUCCESS;
     }
-    
     nNeedToAllocate = MAX(nNeedToAllocate,
                         hStream->nAllocated * (BUFFER_EXPAND_FACTOR-1));
+    
+    /* Reallocate */
     pnNewStream = realloc(hStream->pnStream, hStream->nAllocated + nNeedToAllocate);
     if (NULL == pnNewStream) {
         return GLOB_ERROR_SYS_CALL_ERROR();
@@ -57,6 +90,7 @@ static GLOB_ERROR memstream_EnsureSpace(HBUFFER hStream, int nSpace) {
     hStream->pnStream = pnNewStream;
     return GLOB_SUCCESS;
 }
+
 /******************************************************************************
  * EXTERNAL FUNCTIONS
  * ------------------
@@ -96,38 +130,39 @@ GLOB_ERROR BUFFER_Create(PHBUFFER phStream) {
     return GLOB_SUCCESS;
 }
 
-/******************************************************************************
- * Name:    BUFFER_AppendString
- *****************************************************************************/
-GLOB_ERROR BUFFER_AppendString(HBUFFER hStream, const char * pszStr) {
-    int nLength = 0;
-    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
-    if (NULL == hStream || NULL == pszStr) {
-        return GLOB_ERROR_INVALID_PARAMETERS;
-    }
-    
-    nLength = strlen(pszStr);
-    eRetValue = memstream_EnsureSpace(hStream, nLength);
-    if (eRetValue) {
-        return eRetValue;
-    }
-    
-    memcpy(hStream->pnStream+hStream->nUsed, pszStr, nLength);
-    hStream->nUsed += nLength;
-    return GLOB_SUCCESS;
-}
 
 /******************************************************************************
  * Name:    BUFFER_AppendPrintf
  *****************************************************************************/
 GLOB_ERROR BUFFER_AppendPrintf(HBUFFER hStream, const char * pszFormat, ...) {        
-    char szFormatted[80];
+    char szFormatted[MAX_STRING_SIZE];
+    int nLength = 0;
+    GLOB_ERROR eRetValue = GLOB_ERROR_UNKNOWN;
+
+    
+    if (NULL == hStream || NULL == pszFormat) {
+        return GLOB_ERROR_INVALID_PARAMETERS;
+    }
+    
+    /* format the parameters into the format string */
     va_list vaArgs;
     va_start (vaArgs, pszFormat);
-    vsnprintf (szFormatted, sizeof(szFormatted), pszFormat, vaArgs);
+    nLength = vsnprintf (szFormatted, sizeof(szFormatted), pszFormat, vaArgs);
     va_end (vaArgs);
+    if (nLength < 0) {
+        return GLOB_ERROR_SYS_CALL_ERROR();
+    }
     
-    return BUFFER_AppendString(hStream, szFormatted);
+    /* Ensure enough space */
+    eRetValue = buffer_EnsureSpace(hStream, nLength);
+    if (eRetValue) {
+        return eRetValue;
+    }
+    
+    /* Copy the string (without the '\0') */
+    memcpy(hStream->pnStream+hStream->nUsed, szFormatted, nLength);
+    hStream->nUsed += nLength;
+    return GLOB_SUCCESS;
 }
     
 /******************************************************************************

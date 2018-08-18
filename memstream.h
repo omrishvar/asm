@@ -2,6 +2,7 @@
  * File:    memstream.h
  * Author:  Doron Shvartztuch
  * The MEMSTREAM module provides memory stream functionality.
+ * The basic unit of the stream is int.
  *****************************************************************************/
 
 #ifndef MEMSTREAM_H
@@ -44,7 +45,8 @@ GLOB_ERROR MEMSTREAM_Create(PHMEMSTREAM phStream);
  * Return Value:
  *          Upon successful completion, GLOB_SUCCESS is returned.
  *          If the function fails, an error code is returned.
- * Remark:  The function also write the NULL-terminator to the stream
+ * Remark:  The function also write the NULL-terminator to the stream.
+ *          Each character takes the size of an integer in the stream.
  *****************************************************************************/
 GLOB_ERROR MEMSTREAM_AppendString(HMEMSTREAM hStream, const char * pszStr);
 
@@ -57,13 +59,8 @@ GLOB_ERROR MEMSTREAM_AppendString(HMEMSTREAM hStream, const char * pszStr);
  * Return Value:
  *          Upon successful completion, GLOB_SUCCESS is returned.
  *          If the function fails, an error code is returned.
- * Remark:  The function assumes the number is in the supported range.
- *          Because we use 14-bit words and with the 2's complement,
- *          the supported range is [-8192...+8191]
  *****************************************************************************/
 GLOB_ERROR MEMSTREAM_AppendNumber(HMEMSTREAM hStream, int nNumber);
-
-GLOB_ERROR MEMSTREAM_AppendPrintf(HMEMSTREAM hStream, const char * pszFormat, ...);
 
 /******************************************************************************
  * Name:    MEMSTREAM_Concat
@@ -93,7 +90,8 @@ GLOB_ERROR MEMSTREAM_Concat(HMEMSTREAM hStream1, HMEMSTREAM hStream2);
  *          of the module.
  *****************************************************************************/
 GLOB_ERROR MEMSTREAM_GetStream(HMEMSTREAM hStream,
-                               int ** ppnStream, int * pnStreamLength);
+                               int ** ppnStream,
+                               int * pnStreamLength);
 
 /******************************************************************************
  * Name:    MEMSTREAM_Free

@@ -103,7 +103,7 @@ typedef struct LEX_FILE LEX_FILE, *HLEX_FILE, **PHLEX_FILE;
  *          If the function fails, an error code is returned.
  *****************************************************************************/
 GLOB_ERROR LEX_Open(const char * szFileName,
-                    GLOB_ErrorOrWarningCallback pfnErrorsCallback,
+                    GLOB_ERRORCALLBACK pfnErrorsCallback,
                     void * pvContext,
                     PHLEX_FILE phFile);
 
