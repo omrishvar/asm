@@ -74,6 +74,8 @@ GLOB_ERROR SYMTABLE_Create(HSYMTABLE_TABLE *phTable);
  *          Upon successful completion, GLOB_SUCCESS is returned.
  *          GLOB_ERROR_INVALID_STATE - The table is already finalized.
  *          GLOB_ERROR_ALREADY_EXIST - The symbol is already exist in the table.
+ *          GLOB_ERROR_EXPORT_AND_EXTERN - The symbol marked for export, so you
+ *                                         can't insert it as extern.
  *          If the function fails, an error code is returned.
  * Remarks:
  *          For symbols to export, you have to call both SYMTABLE_Insert and
@@ -94,7 +96,7 @@ GLOB_ERROR SYMTABLE_Insert(HSYMTABLE_TABLE hTable,
  * Return Value:
  *          Upon successful completion, GLOB_SUCCESS is returned.
  *          GLOB_ERROR_INVALID_STATE - The table is already finalized.
- *          GLOB_ERROR_ALREADY_EXIST - The symbol is already exist in the table.
+ *          GLOB_ERROR_ALREADY_EXIST - The symbol is already marked for export.
  *          GLOB_ERROR_EXPORT_AND_EXTERN - The symbol already declared
  *                                         as external. You can't mark it also
  *                                         for export.

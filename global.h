@@ -73,9 +73,6 @@ typedef enum GLOB_ERROR {
      * contain the errno for more information. */
     GLOB_ERROR_SYS_CALL_FAILED = 0x100,
             
-    /* The function encountered end of line */
-    GLOB_ERROR_END_OF_LINE,
-            
     /* The function encountered end of file */
     GLOB_ERROR_END_OF_FILE,
             

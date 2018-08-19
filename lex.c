@@ -120,7 +120,7 @@ static const LEX_PARSER g_afParsers[] = {
 
 /******************************************************************************
  * Name:    lex_ReportError
- * Purpose: Print parsing error message
+ * Purpose: Report parsing error message
  * Parameters:
  *          hFile [IN] - handle to the current file
  *          bIsError [IN] - TRUE for error. FALSE for warning
@@ -455,8 +455,6 @@ static GLOB_ERROR lex_ParseAlpha(HLEX_FILE hFile, PLEX_TOKEN ptToken) {
  *          peFlags [OUT] - flags describing the next token to parse
  * Return Value:
  *          Upon successful completion, GLOB_SUCCESS is returned.
- *          If there are no more tokens in the current line,
- *          GLOB_ERROR_END_OF_LINE is returned.
  *          GLOB_ERROR_END_OF_FILE is returned if finished to process the file.
  *          If the function fails, an error code is returned.
  *****************************************************************************/
@@ -496,8 +494,7 @@ static GLOB_ERROR lex_MoveToNextToken(HLEX_FILE hFile,
               | (bNoSpaceFromPrevToken ?
                   LEX_TOKEN_FLAGS_NO_SPACE_FROM_PREV_TOKEN : 0);
     
-    return (hFile->nCurrentColumn >= hFile->nCurrentLineLength ?
-        GLOB_ERROR_END_OF_LINE : GLOB_SUCCESS);
+    return GLOB_SUCCESS;
 }
 
 /******************************************************************************
@@ -577,23 +574,30 @@ GLOB_ERROR LEX_ReadNextToken(HLEX_FILE hFile, PLEX_TOKEN * pptToken) {
     ptToken->eFlags = eTokenFlags;
     ptToken->nColumn = hFile->nCurrentColumn;
     
-    for (int nParserIndex = 0;
-            nParserIndex < ARRAY_ELEMENTS(g_afParsers);
-            nParserIndex++) {
-        eRetValue = g_afParsers[nParserIndex](hFile, ptToken);
-        if (GLOB_ERROR_CONTINUE != eRetValue) {
-            break;
+    if (hFile->nCurrentColumn >= hFile->nCurrentLineLength) {
+        /* End of line token */
+        ptToken->eKind = LEX_TOKEN_KIND_END_OF_LINE;
+    } else {
+        for (int nParserIndex = 0;
+                nParserIndex < ARRAY_ELEMENTS(g_afParsers);
+                nParserIndex++) {
+            eRetValue = g_afParsers[nParserIndex](hFile, ptToken);
+            if (GLOB_ERROR_CONTINUE != eRetValue) {
+                break;
+            }
         }
-    }
-    if (GLOB_ERROR_CONTINUE == eRetValue) {
-        /* No parser found */
-        eRetValue = GLOB_ERROR_PARSING_FAILED;
-    }
+        if (GLOB_ERROR_CONTINUE == eRetValue) {
+            /* No parser found */
+            lex_ReportError(hFile, TRUE, ptToken->nColumn,
+                "unknown syntax");
+            eRetValue = GLOB_ERROR_PARSING_FAILED;
+        }
     
-    if (eRetValue) {
-        /* Failed to parse the current token. */
-        free(ptToken);
-        return eRetValue;
+        if (eRetValue) {
+            /* Failed to parse the current token. */
+            free(ptToken);
+            return eRetValue;
+        }
     }
     
     /* Set the line of the token */
@@ -602,23 +606,6 @@ GLOB_ERROR LEX_ReadNextToken(HLEX_FILE hFile, PLEX_TOKEN * pptToken) {
     
     /* Set out parameters */
     *pptToken = ptToken;
-    return GLOB_SUCCESS;
-}
-
-// TODO REMOVE FUNCTION
-/******************************************************************************
- * LEX_GetCurrentPosition
- *****************************************************************************/
-GLOB_ERROR LEX_GetCurrentPosition(HLEX_FILE hFile, PLINESTR_LINE * pptLine,
-                                  int * pnColumn) {
-    /* Check parameters */
-    if (NULL == hFile || NULL == pptLine || NULL == pnColumn) {
-        return GLOB_ERROR_INVALID_PARAMETERS;
-    }
-    
-    /* Fill out parameters */
-    *pptLine = hFile->ptCurrentLine;
-    *pnColumn = hFile->nCurrentColumn + 1; /* From zero-based to one-based */
     return GLOB_SUCCESS;
 }
 

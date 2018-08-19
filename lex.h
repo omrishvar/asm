@@ -34,6 +34,7 @@ typedef enum LEX_TOKEN_KIND {   /* Description                  Value field*/
     LEX_TOKEN_KIND_STRING,      /* String                       szStr      */
     LEX_TOKEN_KIND_SPECIAL,     /* Special char                 cChar      */
     LEX_TOKEN_KIND_REMARK,      /* Remark                       no value   */
+    LEX_TOKEN_KIND_END_OF_LINE, /* End of line                  no value   */
 } LEX_TOKEN_KIND;
 
 /* This union defines the possible values for token.
@@ -117,34 +118,10 @@ GLOB_ERROR LEX_Open(const char * szFileName,
  * Return Value:
  *          Upon successful completion, GLOB_SUCCESS is returned.
  *          In this case, the token must be freed with LEX_FreeToken.
- *          If there are no more tokens in the current line,
- *          GLOB_ERROR_END_OF_LINE is returned. Any further calls will fail with
- *          the same error until a call to LEX_MoveToNextLine.
  *          GLOB_ERROR_END_OF_FILE is returned if finished to process the file.
  *          If the function fails, an error code is returned.
  *****************************************************************************/
 GLOB_ERROR LEX_ReadNextToken(HLEX_FILE hFile, PLEX_TOKEN * pptToken);
-
-/******************************************************************************
- * Name:    LEX_GetCurrentPosition
- * Purpose: Provide information about the current position in the file
- *          of the parser
- * Parameters:
- *          hFile [IN] - handle to the file, previously opened by LEX_Open.
- *          pptLine [OUT] - contains the line level information of the current
- *                          posision of the parser. See remarks.
- *          pnColumn [OUT] - the current column.
- * Return Value:
- *          Upon successful completion, GLOB_SUCCESS is returned.
- *          If the function fails, an error code is returned.
- * Remarks:
- *          The caller can use the returned LINESTR_LINE struct until another
- *          call to any function of this module with the same hFile. Then,
- *          the LINESTR_LINE may become unavailable.
- *          The Caller should NOT free the LINESTR_LINE.
- *****************************************************************************/
-GLOB_ERROR LEX_GetCurrentPosition(HLEX_FILE hFile, PLINESTR_LINE * pptLine,
-                                  int * pnColumn);
 
 /******************************************************************************
  * Name:    LEX_MoveToNextLine
