@@ -1046,6 +1046,16 @@ static GLOB_ERROR asm_FirstPhaseCompileNonEmptyLine(HASM_FILE hFile,
         hFile->nCodeCounter += ptLine->nLength;
     }
     
+    /* expect end of line */
+    eRetValue = LEX_ReadNextToken(hFile->hLex, &ptToken);
+    if (eRetValue) {
+        return eRetValue;
+    }
+    if (LEX_TOKEN_KIND_END_OF_LINE != ptToken->eKind) {
+        asm_ReportError(hFile, TRUE, ptToken, "end of line expected");     
+    }
+    LEX_FreeToken(ptToken);
+
     return GLOB_SUCCESS;
 }
 

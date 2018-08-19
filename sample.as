@@ -9,7 +9,7 @@ K:        prn #-5
         bne L3
 L1:     inc K
         bne LOOP(K,W)
-END:    stop
+END:    stop ;aaa
 STR:    .string "abcdef"
 LENGTH: .data 6,-9,15
 .entry  LOOP
